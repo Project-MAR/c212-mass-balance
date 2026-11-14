@@ -74,7 +74,7 @@
   ];
   var CABIN_FROM = 3.300, CABIN_TO = 10.575;
   var BOX = 0.8;          // drawn size of a chemical box (m)
-  var PR = 0.25;        // drawn radius of a person (m)
+  var PR = 0.23;      // drawn radius of a person (m)
 
   var DEFAULT_FLEET = [
     { reg: 'NC212i (example)',   type: 'NC212I',    bew: 4778, arm: 6.042, note: 'Example – replace' },
@@ -88,9 +88,9 @@
       { role: 'Pilot', w: 80, st: 'PIL' },
       { role: 'Co-pilot', w: 80, st: 'COP' },
       { role: 'Flight engineer', w: 80, st: 'FE' },
-      { role: 'Chemical operator 1', w: 80, st: 'S15' },
-      { role: 'Chemical operator 2', w: 80, st: 'S16' },
-      { role: 'Scientist', w: 80, st: 'S1' }
+      { role: 'Chemical operator 1', w: 80, st: 'S5' },   // zone II, RH 4.637
+      { role: 'Chemical operator 2', w: 80, st: 'S6' },   // zone II, LH 4.973
+      { role: 'Scientist', w: 80, st: 'S4' }              // zone II, LH 4.495
     ],
     cargo: [
       { name: 'Chemical 1', w: 250, arm: 5.537, y: 0.42 },
