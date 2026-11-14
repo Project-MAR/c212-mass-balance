@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>C-212 Mass &amp; Balance</title>
+  <?!= include('Styles'); ?>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <svg viewBox="0 0 24 24" class="logo" aria-hidden="true"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/></svg>
+      <div>
+        <h1>C-212 Mass &amp; Balance</h1>
+        <div class="sub">Load sheet · actual CG · weight–CG envelope</div>
+      </div>
+    </div>
+    <div class="actions no-print">
+      <button type="button" id="btnDefault" class="ghost" title="Rainmaking default: 4 people (320 kg), 1000 kg payload, full tanks">Rainmaking default</button>
+      <button type="button" id="btnFleet" class="ghost">Fleet</button>
+      <button type="button" id="btnSave" class="ghost">Save to log</button>
+      <button type="button" id="btnPrint" class="primary">Print</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- ================= INPUTS ================= -->
+    <section class="col inputs">
+      <div class="card">
+        <h2><span class="num">1</span>Flight &amp; aircraft</h2>
+        <div class="grid2">
+          <label>Registration
+            <select id="selReg"></select>
+          </label>
+          <label>Type / limits
+            <select id="selType"></select>
+          </label>
+          <label>Date <input type="date" id="inDate"></label>
+          <label>Flight no. <input type="text" id="inFlight" placeholder="e.g. RR-101"></label>
+          <label>Mission <input type="text" id="inMission"></label>
+          <label>PIC <input type="text" id="inPic" placeholder="Pilot in command"></label>
+        </div>
+        <div class="grid3 mt">
+          <label>Basic empty weight (kg) <input type="number" id="inBew" step="1" min="0"></label>
+          <label>BEW arm (m) <input type="number" id="inBewArm" step="0.001" min="0"></label>
+          <div class="readout"><span>BEW CG</span><b id="outBewCg">–</b></div>
+        </div>
+        <p class="hint" id="typeSource"></p>
+      </div>
+
+      <div class="card">
+        <h2><span class="num">2</span>Crew &amp; persons on board</h2>
+        <table class="tbl" id="tblPeople">
+          <thead><tr><th>Person</th><th class="r">kg</th><th>Station</th><th class="r">Arm m</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div class="rowbtns no-print">
+          <button type="button" class="ghost sm" id="btnAddPerson">+ Add person</button>
+          <span class="total">Total <b id="outPeople">0</b> kg</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2><span class="num">3</span>Payload (cargo zones)</h2>
+        <table class="tbl" id="tblZones">
+          <thead><tr><th>Zone</th><th>Frames</th><th class="r">Arm m</th><th class="r">Max kg</th><th class="r">Load kg</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div class="rowbtns">
+          <label class="check"><input type="checkbox" id="chkDrop"> Payload dispensed before landing (seeding chemical)</label>
+          <span class="total">Payload <b id="outPayload">0</b> kg</span>
+        </div>
+        <details class="mt">
+          <summary>Other items (equipment, baggage, ballast)</summary>
+          <table class="tbl" id="tblItems">
+            <thead><tr><th>Item</th><th class="r">kg</th><th class="r">Arm m</th><th></th></tr></thead>
+            <tbody></tbody>
+          </table>
+          <button type="button" class="ghost sm no-print" id="btnAddItem">+ Add item</button>
+        </details>
+      </div>
+
+      <div class="card">
+        <h2><span class="num">4</span>Fuel</h2>
+        <div class="unitswitch no-print">
+          Units:
+          <label><input type="radio" name="fuelUnit" value="kg" checked> kg</label>
+          <label><input type="radio" name="fuelUnit" value="lb"> lb</label>
+          <button type="button" class="ghost sm" id="btnFull">Full tanks</button>
+        </div>
+        <table class="tbl" id="tblFuel">
+          <thead><tr><th>Tanks (L + R)</th><th class="r">Arm m</th><th class="r">Max</th><th class="r">On board</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div class="grid2 mt">
+          <label><span>Trip fuel burn (<span class="fu">kg</span>)</span> <input type="number" id="inTrip" step="10" min="0"></label>
+          <div class="readout"><span>Fuel at landing</span><b id="outLandFuel">–</b></div>
+        </div>
+        <p class="hint">Burn order used for the CG trace: underwing → outboard → inboard (outboard fuel transfers to keep inboard tanks full).</p>
+      </div>
+    </section>
+
+    <!-- ================= RESULTS ================= -->
+    <section class="col results">
+      <div class="status" id="statusBanner">–</div>
+
+      <div class="kpis">
+        <div class="kpi" id="kZfw"><div class="kl">Zero fuel weight</div><div class="kv">–</div><div class="kc">–</div><div class="km">–</div></div>
+        <div class="kpi hero" id="kTow"><div class="kl">Take-off · actual CG</div><div class="kv">–</div><div class="kc">–</div><div class="km">–</div></div>
+        <div class="kpi" id="kLw"><div class="kl">Landing weight</div><div class="kv">–</div><div class="kc">–</div><div class="km">–</div></div>
+      </div>
+
+      <div class="card chartcard">
+        <div class="charthead">
+          <h2>Weight vs CG envelope</h2>
+          <div class="legend" id="legend"></div>
+        </div>
+        <div id="chart"></div>
+      </div>
+
+      <ul class="warnings" id="warnings"></ul>
+
+      <div class="card">
+        <h2>Load sheet</h2>
+        <table class="tbl sheet" id="tblSheet">
+          <thead><tr><th>Item</th><th class="r">Weight kg</th><th class="r">Arm m</th><th class="r">Moment kg·m</th><th class="r">CG %MAC</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <p class="hint">%MAC = (arm − 5.462) ÷ 2.190 × 100 · Datum 1.115 m forward of jig point · 1 kg = 2.20462 lb</p>
+        <div class="signoff print-only">
+          <div>Prepared by: ____________________</div>
+          <div>PIC signature: ____________________</div>
+        </div>
+      </div>
+
+      <p class="disclaimer">Training / planning aid built from AFM, AOM and W&amp;B manual data held locally. Verify against the current approved flight manual and the aircraft's own weighing report before flight.</p>
+    </section>
+  </main>
+
+  <!-- Fleet editor -->
+  <div class="modal" id="fleetModal" hidden>
+    <div class="modal-box">
+      <h2>Fleet – basic empty weight &amp; arm</h2>
+      <p class="hint">Enter values from each aircraft's latest weighing report / Basic Weight &amp; Balance Record (Form C).</p>
+      <table class="tbl" id="tblFleet">
+        <thead><tr><th>Registration</th><th>Type</th><th class="r">BEW kg</th><th class="r">Arm m</th><th>Note</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <div class="rowbtns">
+        <button type="button" class="ghost sm" id="btnFleetAdd">+ Add aircraft</button>
+        <span class="spacer"></span>
+        <button type="button" class="ghost" id="btnFleetCancel">Cancel</button>
+        <button type="button" class="primary" id="btnFleetSave">Save fleet</button>
+      </div>
+      <p class="msg" id="fleetMsg"></p>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" hidden></div>
+
+  <script>
+    window.SERVER_FLEET = <?!= JSON.stringify(getFleet()); ?>;
+  </script>
+  <?!= include('App'); ?>
+</body>
+</html>

@@ -1,0 +1,10 @@
+# clasp (Apps Script CLI) local config – contains script ID
+.clasp.json
+.clasprc.json
+
+# OS / editor
+Thumbs.db
+desktop.ini
+.DS_Store
+.vscode/
+node_modules/
