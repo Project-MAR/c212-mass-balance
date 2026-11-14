@@ -33,7 +33,8 @@ The first **Save to log** creates a spreadsheet named *C-212 Mass & Balance Log*
 | Cabin seats 1–23 | 3.539 – 9.275 m | NC212i WAB ground school (seat map) |
 | Cargo zones I–VI, A | 3.700 – 9.838 m, maximum 560/755/500/860/765/620/400 kg | W&B Manual 1-60; NC212i WAB |
 | Fuel arms | Inboard 6.26 m, outboard 6.17 m, underwing 5.90 m | W&B Manual 1-20 |
-| C-212-300 | MTOW 7 700, MLW 7 450, MZFW 7 100, min 4 300 kg; CG 15 %→16 % fwd, 30 % aft; fuel 1 556 kg | AFM C-212-DF D.T.88-2508 Sect. 1 |
+| C-212-300 military, normal role (default) | MTOW 8 100, MLW 8 100, MZFW 7 100, min 4 300 kg; fwd 15 % (≤5 013) → 16 % (7 700–8 100); aft 30 % to 8 000 kg, 27 % at 8 100 kg | QRH C-212-300 Rev 4 (Jul 2019) LD-2, LD-4 |
+| C-212-300 civil | MTOW 7 700, MLW 7 450, MZFW 7 100, min 4 300 kg; CG 15 %→16 % fwd, 30 % aft; fuel 1 556 kg | AFM C-212-DF D.T.88-2508 Sect. 1 |
 | C-212-400 military | MTOW/MLW 8 100, MZFW 7 500 kg; aft limit 27 % at 8 100 kg | AOM C-212-400M AB73; W&B Manual 1-10 |
 | C-212-400 FAR 25 / NC212i | MTOW 7 700, MLW 7 450, MZFW 7 100, min 4 700 kg; fwd 12 % (≤6 500) → 16 % (7 700), aft 30 % | W&B Manual 1-10; AOM NC-212i EE92 Table 1-1 |
 

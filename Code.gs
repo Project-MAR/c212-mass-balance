@@ -26,7 +26,7 @@ var DEFAULT_FLEET = [
   { reg: 'C-212-300 (example)', type: 'C212_300',  bew: 4500, arm: 6.000, note: 'Placeholder – enter from weighing report' }
 ];
 
-var VALID_TYPES = ['C212_300', 'C212_400M', 'C212_400C', 'NC212I'];
+var VALID_TYPES = ['C212_300', 'C212_300C', 'C212_400M', 'C212_400C', 'NC212I'];
 
 function doGet() {
   var t = HtmlService.createTemplateFromFile('Index');

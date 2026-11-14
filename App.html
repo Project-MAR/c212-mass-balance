@@ -11,7 +11,14 @@
 
   var TYPES = {
     C212_300: {
-      name: 'C-212-300 (DF)',
+      name: 'C-212-300 – military (normal role)',
+      source: 'QRH C-212-300 Rev 4 (Jul 2019) LD-2 Weight Limitations (military normal role, 2.5 g) and LD-4 Center of Gravity (Military). Fuel-tank arms and cargo zones taken from the C-212-400 W&B Manual (same wing and fuselage).',
+      limits: { ramp: 8150, mtow: 8100, mlw: 8100, mzfw: 7100, minw: 4300 },
+      env: { fwd: [[4300, 15.0], [5013, 15.0], [7700, 16.0], [8100, 16.0]], aft: [[4300, 30.0], [8000, 30.0], [8100, 27.0]] },
+      fuel: { inb: { arm: 6.26, max: 1090 }, outb: { arm: 6.17, max: 466 }, uw: null }
+    },
+    C212_300C: {
+      name: 'C-212-300 – civil (AFM)',
       source: 'AFM C-212-DF (D.T.88-2508) Section 1 & Appendix 1. Fuel-tank arms and cargo zones taken from the C-212-400 W&B Manual (same wing and fuselage).',
       limits: { ramp: 7750, mtow: 7700, mlw: 7450, mzfw: 7100, minw: 4300 },
       env: { fwd: [[4300, 15.0], [5013, 15.0], [7700, 16.0]], aft: [[4300, 30.0], [7700, 30.0]] },
