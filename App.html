@@ -5,6 +5,7 @@
   /* =====================================================================
    * AIRCRAFT DATA  (all arms in metres aft of datum, weights in kg)
    * Datum: 1.115 m forward of the jig point.  LEMAC 5.462 m, MAC 2.190 m.
+   * Lateral position y: metres from centreline, + = right (starboard).
    * ===================================================================== */
   var LEMAC = 5.462, MAC = 2.190, KG2LB = 2.20462;
 
@@ -39,27 +40,34 @@
     }
   };
 
+  // Seats / stations (arm from the NC212i seat map & W&B manual; y = layout position)
   var STATIONS = [
-    { id: 'PIL', label: 'Pilot seat', arm: 2.050 },
-    { id: 'COP', label: 'Co-pilot seat', arm: 2.050 },
-    { id: 'FE',  label: '3rd crew seat', arm: 2.350 },
-    { id: 'LAV', label: 'Lavatory', arm: 3.430 }
+    { id: 'PIL', label: 'Pilot seat', arm: 2.050, y: -0.5 },
+    { id: 'COP', label: 'Co-pilot seat', arm: 2.050, y: 0.5 },
+    { id: 'FE',  label: '3rd crew seat', arm: 2.350, y: 0 },
+    { id: 'LAV', label: 'Lavatory', arm: 3.430, y: 0.75 }
   ];
-  [3.539, 4.017, 4.159, 4.495, 4.637, 4.973, 5.115, 5.451, 5.593, 5.929, 6.071, 6.407,
-   6.549, 6.885, 7.027, 7.363, 7.505, 7.841, 7.983, 8.461, 8.939, 9.275, 9.275].forEach(function (a, i) {
-    STATIONS.push({ id: 'S' + (i + 1), label: 'Cabin seat ' + (i + 1), arm: a });
+  var SEAT_ARMS = [3.539, 4.017, 4.159, 4.495, 4.637, 4.973, 5.115, 5.451, 5.593, 5.929, 6.071, 6.407,
+                   6.549, 6.885, 7.027, 7.363, 7.505, 7.841, 7.983, 8.461, 8.939, 9.275, 9.275];
+  var SEAT_RH = [3, 5, 7, 9, 11, 13, 15, 17, 19, 20, 21, 23];
+  SEAT_ARMS.forEach(function (a, i) {
+    var n = i + 1, rh = SEAT_RH.indexOf(n) >= 0;
+    STATIONS.push({ id: 'S' + n, label: 'Cabin seat ' + n + (rh ? ' RH' : ' LH'), arm: a, y: rh ? 0.8 : -0.8, seat: true });
   });
-  STATIONS.push({ id: 'CUST', label: 'Custom arm…', arm: null });
+  STATIONS.push({ id: 'CUST', label: 'Free position', arm: null });
 
   var ZONES = [
-    { id: 'I',   frames: 'Fr 9P – Fr 1',  arm: 3.700, max: 560 },
-    { id: 'II',  frames: 'Fr 1 – Fr 4',   arm: 4.640, max: 755 },
-    { id: 'III', frames: 'Fr 4 – Fr 6',   arm: 5.537, max: 500 },
-    { id: 'IV',  frames: 'Fr 6 – Fr 11',  arm: 6.506, max: 860 },
-    { id: 'V',   frames: 'Fr 11 – Fr 14', arm: 7.666, max: 765 },
-    { id: 'VI',  frames: 'Fr 14 – Fr 17', arm: 8.656, max: 620 },
-    { id: 'A',   frames: 'Fr 17 – Fr 21 (ramp)', arm: 9.838, max: 400 }
+    { id: 'I',   frames: 'Fr 9P – Fr 1',  from: 3.300, to: 4.100,  arm: 3.700, max: 560 },
+    { id: 'II',  frames: 'Fr 1 – Fr 4',   from: 4.100, to: 5.180,  arm: 4.640, max: 755 },
+    { id: 'III', frames: 'Fr 4 – Fr 6',   from: 5.180, to: 5.893,  arm: 5.537, max: 500 },
+    { id: 'IV',  frames: 'Fr 6 – Fr 11',  from: 5.893, to: 7.119,  arm: 6.506, max: 860 },
+    { id: 'V',   frames: 'Fr 11 – Fr 14', from: 7.119, to: 8.212,  arm: 7.666, max: 765 },
+    { id: 'VI',  frames: 'Fr 14 – Fr 17', from: 8.212, to: 9.100,  arm: 8.656, max: 620 },
+    { id: 'A',   frames: 'Fr 17 – Fr 21 (ramp)', from: 9.100, to: 10.575, arm: 9.838, max: 400 }
   ];
+  var CABIN_FROM = 3.300, CABIN_TO = 10.575;
+  var BOX = 0.8;          // drawn size of a chemical box (m)
+  var PR = 0.25;        // drawn radius of a person (m)
 
   var DEFAULT_FLEET = [
     { reg: 'NC212i (example)',   type: 'NC212I',    bew: 4778, arm: 6.042, note: 'Example – replace' },
@@ -73,9 +81,16 @@
       { role: 'Pilot', w: 80, st: 'PIL' },
       { role: 'Co-pilot', w: 80, st: 'COP' },
       { role: 'Flight engineer', w: 80, st: 'FE' },
-      { role: 'Chemical operator', w: 80, st: 'S1' }
+      { role: 'Chemical operator 1', w: 80, st: 'S15' },
+      { role: 'Chemical operator 2', w: 80, st: 'S16' },
+      { role: 'Scientist', w: 80, st: 'S1' }
     ],
-    zones: { I: 0, II: 0, III: 500, IV: 500, V: 0, VI: 0, A: 0 },
+    cargo: [
+      { name: 'Chemical 1', w: 250, arm: 5.537, y: 0.42 },
+      { name: 'Chemical 2', w: 250, arm: 5.537, y: -0.42 },
+      { name: 'Chemical 3', w: 250, arm: 6.506, y: 0.42 },
+      { name: 'Chemical 4', w: 250, arm: 6.506, y: -0.42 }
+    ],
     trip: 900
   };
 
@@ -94,6 +109,11 @@
     return DEFAULT_FLEET.slice();
   }
 
+  function station(id) {
+    for (var i = 0; i < STATIONS.length; i++) if (STATIONS[i].id === id) return STATIONS[i];
+    return null;
+  }
+
   function rainState(ac, keep) {
     var t = TYPES[ac.type];
     keep = keep || {};
@@ -101,8 +121,11 @@
       reg: ac.reg, type: ac.type, bew: ac.bew, bewArm: ac.arm,
       date: keep.date || todayIso(), flight: keep.flight || '', pic: keep.pic || '',
       mission: RAIN.mission,
-      people: RAIN.people.map(function (p) { return { role: p.role, w: p.w, st: p.st, arm: null }; }),
-      zones: Object.assign({}, RAIN.zones),
+      people: RAIN.people.map(function (p) {
+        var s = station(p.st);
+        return { role: p.role, w: p.w, st: p.st, arm: s.arm, y: s.y };
+      }),
+      cargo: RAIN.cargo.map(function (c) { return Object.assign({}, c); }),
       items: [],
       fuel: { inb: t.fuel.inb.max, outb: t.fuel.outb.max, uw: 0 },
       trip: RAIN.trip,
@@ -123,6 +146,21 @@
   function toUnit(kg) { return state.unit === 'lb' ? kg * KG2LB : kg; }
   function fromUnit(v) { return state.unit === 'lb' ? v / KG2LB : v; }
   function fuelStr(kg) { return f0(kg) + ' kg / ' + f0(kg * KG2LB) + ' lb'; }
+  function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+
+  /** Short tag drawn inside a person's circle: "Pilot" → P, "Co-pilot" → CP, "Chemical operator 1" → CO1. */
+  function tagOf(role) {
+    var s = String(role || '?').trim();
+    var digits = (s.match(/\d+$/) || [''])[0];
+    var words = s.replace(/\d+$/, '').split(/[\s\-_]+/).filter(Boolean);
+    var t = words.map(function (w) { return w[0].toUpperCase(); }).join('').slice(0, 3 - digits.length);
+    return (t || '?') + digits;
+  }
+
+  function zoneOf(arm) {
+    for (var i = 0; i < ZONES.length; i++) if (arm >= ZONES[i].from && arm < ZONES[i].to) return ZONES[i];
+    return arm === CABIN_TO ? ZONES[ZONES.length - 1] : null;
+  }
 
   function interp(pts, w) {
     if (w <= pts[0][0]) return pts[0][1];
@@ -137,12 +175,6 @@
   function envTop(t) { return t.env.fwd[t.env.fwd.length - 1][0]; }
   function fwdLim(t, w) { return interp(t.env.fwd, w); }
   function aftLim(t, w) { return interp(t.env.aft, w); }
-
-  function stationArm(p) {
-    if (p.st === 'CUST') return num(p.arm);
-    for (var i = 0; i < STATIONS.length; i++) if (STATIONS[i].id === p.st) return STATIONS[i].arm;
-    return 0;
-  }
 
   /** Fuel left in each tank group after burning `burn` kg (underwing → outboard → inboard). */
   function burnFuel(f, burn) {
@@ -163,8 +195,18 @@
   }
 
   /* ============================ CALCULATE ============================ */
+  function zoneLoads() {
+    var loads = {}, outside = [];
+    ZONES.forEach(function (z) { loads[z.id] = 0; });
+    state.cargo.forEach(function (c) {
+      var z = zoneOf(num(c.arm));
+      if (z) loads[z.id] += num(c.w); else if (num(c.w)) outside.push(c);
+    });
+    return { loads: loads, outside: outside };
+  }
+
   function compute() {
-    var t = TYPES[state.type], L = t.limits;
+    var t = TYPES[state.type];
     var rows = [], W = 0, M = 0;
     function add(label, w, arm, cls) {
       if (!w) return;
@@ -175,13 +217,13 @@
 
     add('Basic empty weight', state.bew, state.bewArm);
     var peopleW = 0;
-    state.people.forEach(function (p) { var w = num(p.w); peopleW += w; add(p.role || 'Person', w, stationArm(p)); });
+    state.people.forEach(function (p) { var w = num(p.w); peopleW += w; add(p.role || 'Person', w, num(p.arm)); });
     state.items.forEach(function (it) { add(it.desc || 'Item', num(it.w), num(it.arm)); });
     var payW = 0, payM = 0;
-    ZONES.forEach(function (z) {
-      var w = num(state.zones[z.id]);
-      payW += w; payM += w * z.arm;
-      add('Payload – zone ' + z.id, w, z.arm);
+    state.cargo.forEach(function (c) {
+      var w = num(c.w), a = num(c.arm), z = zoneOf(a);
+      payW += w; payM += w * a;
+      add((c.name || 'Chemical') + (z ? ' (zone ' + z.id + ')' : ''), w, a);
     });
     sub('ZERO FUEL WEIGHT');
     var zfw = { w: W, m: M };
@@ -197,8 +239,8 @@
     var trip = Math.min(num(state.trip), fuelTot);
     var landFuel = burnFuel(fuel, trip);
     var lf = fuelMass(t, landFuel);
-    var tripMass = fuelMass(t, fuel);
-    rows.push({ label: 'Trip fuel burned', w: -trip, arm: trip ? (tripMass.m - lf.m) / trip : 0, m: -(tripMass.m - lf.m), cls: 'minus' });
+    var full = fuelMass(t, fuel);
+    rows.push({ label: 'Trip fuel burned', w: -trip, arm: trip ? (full.m - lf.m) / trip : 0, m: -(full.m - lf.m), cls: 'minus' });
     var lwW = zfw.w + lf.w, lwM = zfw.m + lf.m;
     if (state.drop && payW) {
       rows.push({ label: 'Payload dispensed in flight', w: -payW, arm: payM / payW, m: -payM, cls: 'minus' });
@@ -207,7 +249,6 @@
     rows.push({ label: 'LANDING WEIGHT', w: lwW, arm: lwW ? lwM / lwW : 0, m: lwM, cls: 'sub', cg: lwW ? pct(lwM / lwW) : 0 });
     var lw = { w: lwW, m: lwM };
 
-    // CG traces while fuel burns (payload on board; and after payload release)
     function trace(baseW, baseM) {
       var pts = [], N = 40;
       for (var k = 0; k <= N; k++) {
@@ -223,7 +264,8 @@
     function pt(o) { var arm = o.w ? o.m / o.w : 0; return { w: o.w, arm: arm, cg: pct(arm) }; }
     var res = {
       t: t, rows: rows, zfw: pt(zfw), tow: pt(tow), lw: pt(lw), tr1: tr1, tr2: tr2,
-      peopleW: peopleW, payW: payW, fuelTot: fuelTot, trip: trip, landFuel: lf.w, issues: []
+      peopleW: peopleW, payW: payW, fuelTot: fuelTot, trip: trip, landFuel: lf.w, issues: [],
+      zl: zoneLoads()
     };
     check(res, fuel);
     return res;
@@ -252,9 +294,10 @@
     if (outTrace) bad('CG leaves the envelope during the fuel burn – check fuel and load distribution.');
 
     ZONES.forEach(function (z) {
-      var w = num(state.zones[z.id]);
+      var w = r.zl.loads[z.id];
       if (w > z.max) bad('Zone ' + z.id + ' load ' + f0(w) + ' kg exceeds the recommended maximum of ' + f0(z.max) + ' kg.');
     });
+    r.zl.outside.forEach(function (c) { warn((c.name || 'Chemical') + ' (arm ' + f3(num(c.arm)) + ' m) is outside the cargo zones.'); });
     ['inb', 'outb', 'uw'].forEach(function (k) {
       if (t.fuel[k] && fuel[k] > t.fuel[k].max + 0.5) bad('Fuel in ' + ({ inb: 'inboard', outb: 'outboard', uw: 'underwing' })[k] + ' tanks exceeds usable capacity (' + f0(t.fuel[k].max) + ' kg).');
     });
@@ -282,7 +325,6 @@
     s.push('<svg viewBox="0 0 ' + Wd + ' ' + Ht + '" role="img" aria-label="Weight versus CG envelope chart">');
     s.push('<rect x="' + ml + '" y="' + mt + '" width="' + pw + '" height="' + ph + '" fill="#fff" stroke="#c9d1db"/>');
 
-    // grid + axes
     for (var gx = Math.ceil(xmin / 2) * 2; gx <= xmax; gx += 2) {
       s.push('<line x1="' + X(gx) + '" x2="' + X(gx) + '" y1="' + mt + '" y2="' + (mt + ph) + '" stroke="var(--grid)"/>');
       s.push('<text x="' + X(gx) + '" y="' + (mt + ph + 16) + '" font-size="11" text-anchor="middle" fill="#4a5666">' + gx + '</text>');
@@ -291,7 +333,6 @@
       s.push('<line x1="' + ml + '" x2="' + (ml + pw) + '" y1="' + Y(gy) + '" y2="' + Y(gy) + '" stroke="var(--grid)"/>');
       s.push('<text x="' + (ml - 6) + '" y="' + (Y(gy) + 4) + '" font-size="11" text-anchor="end" fill="#4a5666">' + f0(gy) + '</text>');
     }
-    // top axis: arm in metres
     var a0 = Math.ceil((LEMAC + MAC * xmin / 100) * 10) / 10;
     for (var a = a0; pct(a) <= xmax + 1e-9; a = Math.round((a + 0.1) * 10) / 10) {
       var xa = X(pct(a));
@@ -302,14 +343,11 @@
     s.push('<text x="' + (ml + pw) + '" y="13" font-size="10" text-anchor="end" fill="#7c8796">Arm from datum (m)</text>');
     s.push('<text transform="translate(14 ' + (mt + ph / 2) + ') rotate(-90)" font-size="12" text-anchor="middle" fill="#17202b">Gross weight (kg)</text>');
 
-    // envelope polygon
     var poly = [];
-    var fwdPts = t.env.fwd.slice(), aftPts = t.env.aft.slice().reverse();
-    fwdPts.forEach(function (p) { poly.push(X(p[1]) + ',' + Y(p[0])); });
-    aftPts.forEach(function (p) { poly.push(X(p[1]) + ',' + Y(p[0])); });
+    t.env.fwd.forEach(function (p) { poly.push(X(p[1]) + ',' + Y(p[0])); });
+    t.env.aft.slice().reverse().forEach(function (p) { poly.push(X(p[1]) + ',' + Y(p[0])); });
     s.push('<polygon points="' + poly.join(' ') + '" fill="var(--env)" stroke="var(--env-line)" stroke-width="2"/>');
 
-    // limit lines
     function hline(w, label, dash) {
       var x1 = X(fwdLim(t, w)), x2 = X(aftLim(t, w));
       s.push('<line x1="' + x1 + '" x2="' + x2 + '" y1="' + Y(w) + '" y2="' + Y(w) + '" stroke="var(--env-line)" stroke-width="1.4"' + (dash ? ' stroke-dasharray="6 4"' : '') + '/>');
@@ -320,7 +358,6 @@
     hline(L.mzfw, 'MZFW', true);
     s.push('<text x="' + (X(fwdLim(t, L.minw)) + 4) + '" y="' + (Y(L.minw) + 14) + '" font-size="10" fill="#7c8796">Min flight weight ' + f0(L.minw) + '</text>');
 
-    // fuel-burn traces
     function path(tr, color, dash) {
       if (!tr) return;
       var d = tr.map(function (p, i) { return (i ? 'L' : 'M') + X(p[0]).toFixed(1) + ' ' + Y(p[1]).toFixed(1); }).join(' ');
@@ -328,18 +365,15 @@
     }
     path(r.tr1, 'var(--tow)', false);
     path(r.tr2, 'var(--lw)', true);
-    // vertical connector TOW-with-fuel to ZFW is not physical; show ZFW alone
 
-    // points
     function marker(p, shape, color, label, dx, dy, anchor) {
-      var x = X(p.cg), y = Y(p.w), m;
-      if (shape === 'circle') m = '<circle cx="' + x + '" cy="' + y + '" r="6.5"';
-      else if (shape === 'square') m = '<rect x="' + (x - 7) + '" y="' + (y - 7) + '" width="14" height="14" transform="rotate(45 ' + x + ' ' + y + ')"';
-      else m = '<polygon points="' + x + ',' + (y - 8) + ' ' + (x + 7.5) + ',' + (y + 6) + ' ' + (x - 7.5) + ',' + (y + 6) + '"';
-      s.push('<g>' + m + ' fill="' + color + '" stroke="#fff" stroke-width="2"><title>' + label + ': ' + f0(p.w) + ' kg, ' + f1(p.cg) + ' %MAC (' + f3(p.arm) + ' m)</title></' + (shape === 'circle' ? 'circle' : (shape === 'square' ? 'rect' : 'polygon')) + '>');
-      var tx = x + dx, ty = y + dy;
-      s.push('<text x="' + tx + '" y="' + ty + '" font-size="12" font-weight="700" text-anchor="' + anchor + '" fill="' + color + '" paint-order="stroke" stroke="#fff" stroke-width="3">' + label + '</text>');
-      s.push('<text x="' + tx + '" y="' + (ty + 13) + '" font-size="11" text-anchor="' + anchor + '" fill="#17202b" paint-order="stroke" stroke="#fff" stroke-width="3">' + f0(p.w) + ' kg · ' + f1(p.cg) + '%</text>');
+      var x = X(p.cg), y = Y(p.w), tag, m;
+      if (shape === 'circle') { tag = 'circle'; m = '<circle cx="' + x + '" cy="' + y + '" r="6.5"'; }
+      else if (shape === 'square') { tag = 'rect'; m = '<rect x="' + (x - 7) + '" y="' + (y - 7) + '" width="14" height="14" transform="rotate(45 ' + x + ' ' + y + ')"'; }
+      else { tag = 'polygon'; m = '<polygon points="' + x + ',' + (y - 8) + ' ' + (x + 7.5) + ',' + (y + 6) + ' ' + (x - 7.5) + ',' + (y + 6) + '"'; }
+      s.push('<g>' + m + ' fill="' + color + '" stroke="#fff" stroke-width="2"><title>' + label + ': ' + f0(p.w) + ' kg, ' + f1(p.cg) + ' %MAC (' + f3(p.arm) + ' m)</title></' + tag + '>');
+      s.push('<text x="' + (x + dx) + '" y="' + (y + dy) + '" font-size="12" font-weight="700" text-anchor="' + anchor + '" fill="' + color + '" paint-order="stroke" stroke="#fff" stroke-width="3">' + label + '</text>');
+      s.push('<text x="' + (x + dx) + '" y="' + (y + dy + 13) + '" font-size="11" text-anchor="' + anchor + '" fill="#17202b" paint-order="stroke" stroke="#fff" stroke-width="3">' + f0(p.w) + ' kg · ' + f1(p.cg) + '%</text>');
       s.push('</g>');
     }
     marker(r.zfw, 'circle', 'var(--zfw)', 'ZFW', -12, 4, 'end');
@@ -356,14 +390,257 @@
       '<span><i style="background:var(--zfw)"></i>ZFW</span>';
   }
 
+  /* ============================ TOP VIEW ============================= */
+  // Scale: K px per metre. Nose to the left, starboard (RH, +y) at the top.
+  var TV = { K: 56, AMIN: -0.3, AMAX: 16.3, HALF: 3.2, TOP: 56, BOT: 46 };
+  TV.W = Math.round((TV.AMAX - TV.AMIN) * TV.K + 32);
+  TV.H = Math.round(TV.TOP + 2 * TV.HALF * TV.K + TV.BOT);
+  TV.CY = TV.TOP + TV.HALF * TV.K;
+  function TX(arm) { return 16 + (arm - TV.AMIN) * TV.K; }
+  function TY(y) { return TV.CY - y * TV.K; }
+  function armOfX(x) { return (x - 16) / TV.K + TV.AMIN; }
+  function yOfY(py) { return (TV.CY - py) / TV.K; }
+  function r1(n) { return Math.round(n * 10) / 10; }
+
+  function renderTopView() {
+    var s = [], K = TV.K;
+    s.push('<svg id="tvsvg" viewBox="0 0 ' + TV.W + ' ' + TV.H + '" role="application" aria-label="Aircraft top view with draggable crew and chemical payload">');
+    s.push('<defs><clipPath id="tvclip"><rect x="0" y="' + (TV.TOP - 6) + '" width="' + TV.W + '" height="' + (2 * TV.HALF * K + 12) + '"/></clipPath>' +
+      '<pattern id="ramp" width="8" height="8" patternUnits="userSpaceOnUse"><path d="M0 8 L8 0" stroke="#c9d1db" stroke-width="1"/></pattern></defs>');
+
+    // --- arm ruler (top) ---
+    s.push('<line x1="' + TX(0) + '" x2="' + TX(16) + '" y1="28" y2="28" stroke="#7c8796"/>');
+    for (var a = 0; a <= 16.001; a += 0.5) {
+      var major = Math.abs(a - Math.round(a)) < 1e-6;
+      s.push('<line x1="' + TX(a) + '" x2="' + TX(a) + '" y1="28" y2="' + (major ? 36 : 32) + '" stroke="#7c8796"/>');
+      if (major) s.push('<text x="' + TX(a) + '" y="22" font-size="11" text-anchor="middle" fill="#4a5666">' + a + '</text>');
+    }
+    s.push('<text x="' + TX(16.25) + '" y="22" font-size="11" fill="#4a5666">m</text>');
+    s.push('<text x="' + TX(0) + '" y="48" font-size="10" fill="#7c8796" text-anchor="start">↑ datum (0 m)</text>');
+
+    s.push('<g clip-path="url(#tvclip)">');
+    // horizontal tail and wings (behind fuselage)
+    s.push('<polygon points="' + TX(13.3) + ',' + TY(4.2) + ' ' + TX(14.4) + ',' + TY(4.2) + ' ' + TX(15.4) + ',' + TY(0.4) + ' ' + TX(15.4) + ',' + TY(-0.4) + ' ' + TX(14.4) + ',' + TY(-4.2) + ' ' + TX(13.3) + ',' + TY(-4.2) + '" fill="#eef1f5" stroke="#aab4c0"/>');
+    s.push('<rect x="' + TX(5.30) + '" y="' + TY(9.5) + '" width="' + (2.5 * K) + '" height="' + (19 * K) + '" fill="#eef1f5" stroke="#aab4c0"/>');
+    // nacelles & propellers
+    [2.75, -2.75].forEach(function (yy) {
+      s.push('<rect x="' + TX(3.75) + '" y="' + TY(yy + 0.45) + '" width="' + (4.2 * K) + '" height="' + (0.9 * K) + '" rx="' + (0.4 * K) + '" fill="#e2e7ee" stroke="#9aa5b2"/>');
+      s.push('<line x1="' + TX(3.6) + '" x2="' + TX(3.6) + '" y1="' + TY(yy + 1.397) + '" y2="' + TY(yy - 1.397) + '" stroke="#9aa5b2" stroke-width="3" stroke-linecap="round"/>');
+    });
+    // fuselage outline
+    var prof = [[0.35, 0], [0.55, 0.42], [0.95, 0.72], [1.5, 0.95], [2.3, 1.1], [3.0, 1.15], [9.4, 1.15], [10.6, 1.05], [12.4, 0.78], [14.4, 0.48], [15.5, 0.3], [15.6, 0]];
+    var pts = prof.map(function (p) { return TX(p[0]) + ',' + TY(p[1]); })
+      .concat(prof.slice().reverse().map(function (p) { return TX(p[0]) + ',' + TY(-p[1]); }));
+    s.push('<polygon points="' + pts.join(' ') + '" fill="#f8fafc" stroke="#5b6675" stroke-width="1.6"/>');
+    // cockpit windscreen hint
+    s.push('<path d="M' + TX(1.25) + ' ' + TY(0.85) + ' Q' + TX(0.95) + ' ' + TY(0) + ' ' + TX(1.25) + ' ' + TY(-0.85) + '" fill="none" stroke="#9aa5b2" stroke-width="2"/>');
+    s.push('<text x="' + TX(1.0) + '" y="' + (TY(0) + 4) + '" font-size="10" fill="#7c8796" text-anchor="middle" transform="rotate(-90 ' + TX(1.0) + ' ' + (TY(0) + 4) + ')">COCKPIT</text>');
+    s.push('<line x1="' + TX(CABIN_FROM) + '" x2="' + TX(CABIN_FROM) + '" y1="' + TY(1.15) + '" y2="' + TY(-1.15) + '" stroke="#5b6675" stroke-dasharray="4 3"/>');
+
+    // cargo zones
+    ZONES.forEach(function (z, i) {
+      s.push('<rect class="zone" data-z="' + z.id + '" x="' + TX(z.from) + '" y="' + TY(1.1) + '" width="' + ((z.to - z.from) * K) + '" height="' + (2.2 * K) + '" fill="' + (z.id === 'A' ? 'url(#ramp)' : (i % 2 ? '#eaf1fb' : '#f3f7fc')) + '"/>');
+      s.push('<line x1="' + TX(z.to) + '" x2="' + TX(z.to) + '" y1="' + TY(1.1) + '" y2="' + TY(-1.1) + '" stroke="#b9c6d6" stroke-dasharray="3 3"/>');
+      var cx = TX((z.from + z.to) / 2);
+      s.push('<text x="' + cx + '" y="' + (TY(1.15) - 5) + '" font-size="12" font-weight="700" text-anchor="middle" fill="#1f5fae"><title>Zone ' + z.id + ': ' + z.frames + ', ' + z.from.toFixed(3) + '–' + z.to.toFixed(3) + ' m, max ' + z.max + ' kg</title>' + (z.id === 'A' ? 'A ramp' : z.id) + '</text>');
+      s.push('<text x="' + cx + '" y="' + (TY(-1.15) + 13) + '" font-size="10" text-anchor="middle" fill="#4a5666">' + z.arm.toFixed(3) + '</text>');
+    });
+    s.push('<text x="' + (TX(CABIN_FROM) - 6) + '" y="' + (TY(1.15) - 5) + '" font-size="10" text-anchor="end" fill="#7c8796">Zone</text>');
+    s.push('<text x="' + TX(2.0) + '" y="' + (TY(-1.15) + 13) + '" font-size="10" text-anchor="middle" fill="#4a5666">Crew 2.050 / 2.350</text>');
+
+    // seats
+    STATIONS.forEach(function (st) {
+      if (st.arm == null || st.id === 'LAV') return;
+      var w = st.seat ? 0.36 : 0.44, h = st.seat ? 0.34 : 0.44;
+      s.push('<rect x="' + (TX(st.arm) - w * K / 2) + '" y="' + (TY(st.y) - h * K / 2) + '" width="' + (w * K) + '" height="' + (h * K) + '" rx="3" fill="none" stroke="#c3ccd8"><title>' + st.label + ' – ' + st.arm.toFixed(3) + ' m</title></rect>');
+    });
+
+    // CG markers sit under the labels and the draggable items
+    s.push('<g id="tvCg"></g>');
+    // wing labels: MAC bar and fuel tanks
+    var macY = -2.15;
+    s.push('<text x="' + TX(6.55) + '" y="' + (TY(1.6) + 4) + '" font-size="10" text-anchor="middle" fill="#4a5666" paint-order="stroke" stroke="#eef1f5" stroke-width="4">Wing fuel 6.17 / 6.26 m · underwing 5.90 m</text>');
+    s.push('<rect x="' + TX(LEMAC) + '" y="' + (TY(macY) - 5) + '" width="' + (MAC * K) + '" height="10" fill="#fff" stroke="#5b6675"/>');
+    s.push('<g id="tvLimits"></g>');
+    for (var p = 0; p <= 100.001; p += 10) {
+      var xx = TX(LEMAC + MAC * p / 100);
+      s.push('<line x1="' + xx + '" x2="' + xx + '" y1="' + (TY(macY) - 5) + '" y2="' + (TY(macY) + (p % 50 === 0 ? 9 : 6)) + '" stroke="#5b6675"/>');
+    }
+    s.push('<text x="' + TX(LEMAC) + '" y="' + (TY(macY) + 20) + '" font-size="9" text-anchor="middle" fill="#4a5666">0% · 5.462</text>');
+    s.push('<text x="' + TX(LEMAC + MAC) + '" y="' + (TY(macY) + 20) + '" font-size="9" text-anchor="middle" fill="#4a5666">100% · 7.652</text>');
+    s.push('<text x="' + TX(LEMAC + MAC / 2) + '" y="' + (TY(macY) - 10) + '" font-size="10" text-anchor="middle" font-weight="700" fill="#4a5666">MAC 2.190 m</text>');
+    s.push('</g>');
+
+    // section boundaries ruler (bottom)
+    var by = TV.H - 26;
+    s.push('<line x1="' + TX(CABIN_FROM) + '" x2="' + TX(CABIN_TO) + '" y1="' + by + '" y2="' + by + '" stroke="#7c8796"/>');
+    [CABIN_FROM].concat(ZONES.map(function (z) { return z.to; })).forEach(function (b) {
+      s.push('<line x1="' + TX(b) + '" x2="' + TX(b) + '" y1="' + (by - 5) + '" y2="' + (by + 5) + '" stroke="#7c8796"/>');
+      s.push('<text x="' + TX(b) + '" y="' + (by + 17) + '" font-size="10" text-anchor="middle" fill="#4a5666">' + b.toFixed(3) + '</text>');
+    });
+    s.push('<text x="' + (TX(CABIN_FROM) - 8) + '" y="' + (by + 4) + '" font-size="10" text-anchor="end" fill="#7c8796">Zone boundaries (m)</text>');
+
+    // dynamic layers
+    s.push('<g id="tvItems"></g>');
+    s.push('<text id="tvRead" x="0" y="0" font-size="12" font-weight="700" fill="#17202b" paint-order="stroke" stroke="#fff" stroke-width="4" visibility="hidden"></text>');
+    s.push('</svg>');
+    $('topview').innerHTML = s.join('');
+    renderTopItems();
+  }
+
+  function itemTitle(kind, it) {
+    return kind === 'p'
+      ? esc(it.role) + ' – ' + f0(num(it.w)) + ' kg at ' + f3(num(it.arm)) + ' m'
+      : esc(it.name) + ' – ' + f0(num(it.w)) + ' kg at ' + f3(num(it.arm)) + ' m';
+  }
+
+  function renderTopItems() {
+    var s = [], K = TV.K;
+    state.cargo.forEach(function (c, i) {
+      var h = BOX * K / 2;
+      s.push('<g class="dr" data-kind="c" data-i="' + i + '" tabindex="0" transform="translate(' + r1(TX(num(c.arm))) + ' ' + r1(TY(num(c.y))) + ')">' +
+        '<title>' + itemTitle('c', c) + '</title>' +
+        '<rect class="shape" x="' + (-h) + '" y="' + (-h) + '" width="' + (2 * h) + '" height="' + (2 * h) + '" rx="3" fill="#f59e0b" fill-opacity=".9" stroke="#b45309" stroke-width="1.5"/>' +
+        '<line x1="' + (-h) + '" y1="' + (-h) + '" x2="' + h + '" y2="' + h + '" stroke="#b45309" stroke-opacity=".35"/>' +
+        '<line x1="' + h + '" y1="' + (-h) + '" x2="' + (-h) + '" y2="' + h + '" stroke="#b45309" stroke-opacity=".35"/>' +
+        '<text y="-2" font-size="12" font-weight="700" text-anchor="middle" fill="#3b2300" paint-order="stroke" stroke="#fbbf24" stroke-width="3">' + f0(num(c.w)) + '</text>' +
+        '<text y="11" font-size="9" text-anchor="middle" fill="#3b2300">kg</text></g>');
+    });
+    state.people.forEach(function (p, i) {
+      s.push('<g class="dr" data-kind="p" data-i="' + i + '" tabindex="0" transform="translate(' + r1(TX(num(p.arm))) + ' ' + r1(TY(num(p.y))) + ')">' +
+        '<title>' + itemTitle('p', p) + '</title>' +
+        '<circle class="shape" r="' + (PR * K) + '" fill="#2563eb" stroke="#1e3a8a" stroke-width="1.5"/>' +
+        '<text y="4" font-size="11" font-weight="700" text-anchor="middle" fill="#fff">' + esc(tagOf(p.role)) + '</text></g>');
+    });
+    $('tvItems').innerHTML = s.join('');
+  }
+
+  function updateTopDynamic(r) {
+    var K = TV.K, s = [];
+    // TOW CG line through the fuselage + ZFW / LW markers
+    function cgMark(p, color, label, yTop, solid) {
+      var x = TX(p.arm);
+      s.push('<line x1="' + x + '" x2="' + x + '" y1="' + TY(1.95) + '" y2="' + TY(-2.45) + '" stroke="' + color + '" stroke-width="' + (solid ? 2.5 : 1.5) + '"' + (solid ? '' : ' stroke-dasharray="4 3"') + '/>');
+      s.push('<path d="M' + (x - 6) + ' ' + (TY(-2.45) + 9) + ' L' + (x + 6) + ' ' + (TY(-2.45) + 9) + ' L' + x + ' ' + (TY(-2.45) - 1) + 'z" fill="' + color + '"/>');
+      if (label) s.push('<text x="' + x + '" y="' + yTop + '" font-size="11" font-weight="700" text-anchor="middle" fill="' + color + '" paint-order="stroke" stroke="#fff" stroke-width="3">' + label + '</text>');
+    }
+    cgMark(r.zfw, 'var(--zfw)', '', 0, false);
+    cgMark(r.lw, 'var(--lw)', '', 0, false);
+    cgMark(r.tow, 'var(--tow)', 'TOW CG ' + f3(r.tow.arm) + ' m · ' + f1(r.tow.cg) + '% MAC', TY(1.95) - 5, true);
+    $('tvCg').innerHTML = s.join('');
+
+    // CG limits at take-off weight on the MAC bar
+    var t = r.t, w = Math.min(r.tow.w, envTop(t)), fl = fwdLim(t, w), al = aftLim(t, w), my = TY(-2.15);
+    var x1 = TX(LEMAC + MAC * fl / 100), x2 = TX(LEMAC + MAC * al / 100);
+    $('tvLimits').innerHTML = '<rect x="' + x1 + '" y="' + (my - 5) + '" width="' + (x2 - x1) + '" height="10" fill="#bbf7d0"><title>Allowed CG at take-off weight: ' + f1(fl) + '–' + f1(al) + ' %MAC</title></rect>';
+
+    // zone overload tint
+    document.querySelectorAll('#tvsvg .zone').forEach(function (el) {
+      var z = el.getAttribute('data-z'), zz = ZONES.filter(function (q) { return q.id === z; })[0];
+      el.style.fill = r.zl.loads[z] > zz.max ? '#fde2e0' : '';
+    });
+  }
+
+  /* ---------- drag & keyboard ---------- */
+  var drag = null;
+  function svgPoint(svg, e) {
+    var p = svg.createSVGPoint(); p.x = e.clientX; p.y = e.clientY;
+    return p.matrixTransform(svg.getScreenCTM().inverse());
+  }
+  function itemOf(g) { return g.getAttribute('data-kind') === 'p' ? state.people[+g.getAttribute('data-i')] : state.cargo[+g.getAttribute('data-i')]; }
+
+  function placeItem(g, it, arm, y) {
+    var kind = g.getAttribute('data-kind');
+    if (kind === 'p') {
+      arm = clamp(arm, 1.75, CABIN_TO - 0.15); y = clamp(y, -0.95, 0.95);
+      if (it.st !== 'CUST') it.st = 'CUST';
+    } else {
+      arm = clamp(arm, CABIN_FROM, CABIN_TO); y = clamp(y, -1.1 + BOX / 2, 1.1 - BOX / 2);
+    }
+    it.arm = Math.round(arm * 1000) / 1000; it.y = Math.round(y * 100) / 100;
+    g.setAttribute('transform', 'translate(' + r1(TX(it.arm)) + ' ' + r1(TY(it.y)) + ')');
+    g.querySelector('title').textContent = itemTitle(kind, it).replace(/&amp;/g, '&');
+    var rd = $('tvRead');
+    rd.textContent = (kind === 'p' ? tagOf(it.role) : it.name) + ' · ' + f3(it.arm) + ' m' + (kind === 'c' ? ' · zone ' + ((zoneOf(it.arm) || {}).id || '–') : '');
+    rd.setAttribute('x', TX(it.arm) + 20); rd.setAttribute('y', TY(it.y) - 20);
+    rd.setAttribute('visibility', 'visible');
+    syncRowInputs(kind, +g.getAttribute('data-i'));
+    recalc();
+  }
+
+  function bindTopView() {
+    var host = $('topview');
+    host.addEventListener('pointerdown', function (e) {
+      var g = e.target.closest('g.dr'); if (!g) return;
+      e.preventDefault();
+      var svg = $('tvsvg'), pt = svgPoint(svg, e), it = itemOf(g);
+      drag = { g: g, id: e.pointerId, dArm: num(it.arm) - armOfX(pt.x), dY: num(it.y) - yOfY(pt.y) };
+      g.setPointerCapture(e.pointerId);
+      g.classList.add('dragging');
+      g.parentNode.appendChild(g);  // bring to front
+      g.focus({ preventScroll: true });
+      highlightRow(g);
+    });
+    host.addEventListener('pointermove', function (e) {
+      if (!drag || e.pointerId !== drag.id) return;
+      var pt = svgPoint($('tvsvg'), e);
+      placeItem(drag.g, itemOf(drag.g), armOfX(pt.x) + drag.dArm, yOfY(pt.y) + drag.dY);
+    });
+    function end(e) {
+      if (!drag || e.pointerId !== drag.id) return;
+      drag.g.classList.remove('dragging');
+      drag = null;
+      $('tvRead').setAttribute('visibility', 'hidden');
+      renderPeopleStations();
+    }
+    host.addEventListener('pointerup', end);
+    host.addEventListener('pointercancel', end);
+    host.addEventListener('keydown', function (e) {
+      var g = e.target.closest && e.target.closest('g.dr'); if (!g) return;
+      var step = e.shiftKey ? 0.01 : 0.05, it = itemOf(g), da = 0, dy = 0;
+      if (e.key === 'ArrowLeft') da = -step; else if (e.key === 'ArrowRight') da = step;
+      else if (e.key === 'ArrowUp') dy = step; else if (e.key === 'ArrowDown') dy = -step; else return;
+      e.preventDefault();
+      placeItem(g, it, num(it.arm) + da, num(it.y) + dy);
+      renderPeopleStations();
+    });
+    host.addEventListener('focusout', function () { $('tvRead').setAttribute('visibility', 'hidden'); });
+    host.addEventListener('focusin', function (e) { var g = e.target.closest && e.target.closest('g.dr'); if (g) highlightRow(g); });
+  }
+
+  function highlightRow(g) {
+    document.querySelectorAll('#tblPeople tr.hl, #tblCargo tr.hl').forEach(function (tr) { tr.classList.remove('hl'); });
+    var tb = g.getAttribute('data-kind') === 'p' ? $('tblPeople') : $('tblCargo');
+    var tr = tb.tBodies[0].rows[+g.getAttribute('data-i')];
+    if (tr) tr.classList.add('hl');
+  }
+
+  /** Update the arm input of a table row without rebuilding the table (keeps focus). */
+  function syncRowInputs(kind, i) {
+    var tb = kind === 'p' ? $('tblPeople') : $('tblCargo');
+    var tr = tb.tBodies[0].rows[i]; if (!tr) return;
+    var it = kind === 'p' ? state.people[i] : state.cargo[i];
+    var inp = tr.querySelector('input[data-k=arm]');
+    if (inp && document.activeElement !== inp) inp.value = f3(num(it.arm));
+    var zc = tr.querySelector('.zc');
+    if (zc) { var z = zoneOf(num(it.arm)); zc.textContent = z ? z.id : 'outside'; }
+  }
+  function renderPeopleStations() {
+    state.people.forEach(function (p, i) {
+      var tr = $('tblPeople').tBodies[0].rows[i]; if (!tr) return;
+      var sel = tr.querySelector('select[data-k=st]'); if (sel && sel.value !== p.st) sel.value = p.st;
+    });
+  }
+
   /* ============================ RENDER =============================== */
   function renderAll() {
     renderSelectors();
     renderHeaderInputs();
     renderPeople();
-    renderZones();
+    renderCargo();
     renderItems();
     renderFuel();
+    renderTopView();
     recalc();
   }
 
@@ -396,25 +673,33 @@
   }
 
   function renderPeople() {
-    var tb = $('tblPeople').tBodies[0];
-    tb.innerHTML = state.people.map(function (p, i) {
-      var arm = stationArm(p);
+    $('tblPeople').tBodies[0].innerHTML = state.people.map(function (p, i) {
       return '<tr data-i="' + i + '">' +
-        '<td><input type="text" data-k="role" value="' + esc(p.role) + '"></td>' +
+        '<td><div class="namecell"><span class="tag p">' + esc(tagOf(p.role)) + '</span><input type="text" data-k="role" value="' + esc(p.role) + '"></div></td>' +
         '<td class="w-kg"><input type="number" data-k="w" step="1" min="0" value="' + p.w + '"></td>' +
         '<td><select data-k="st">' + stationOptions(p.st) + '</select></td>' +
-        '<td class="w-arm r">' + (p.st === 'CUST'
-          ? '<input type="number" data-k="arm" step="0.001" value="' + (p.arm == null ? '' : p.arm) + '">'
-          : '<span class="muted">' + arm.toFixed(3) + '</span>') + '</td>' +
+        '<td class="w-arm"><input type="number" data-k="arm" step="0.01" value="' + f3(num(p.arm)) + '"></td>' +
         '<td><button type="button" class="icon no-print" data-del="' + i + '" title="Remove">×</button></td></tr>';
     }).join('');
   }
 
-  function renderZones() {
-    var tb = $('tblZones').tBodies[0];
-    tb.innerHTML = ZONES.map(function (z) {
-      return '<tr><td><b>' + z.id + '</b></td><td class="muted">' + z.frames + '</td><td class="r">' + z.arm.toFixed(3) + '</td><td class="r muted">' + z.max +
-        '</td><td class="w-kg"><input type="number" data-zone="' + z.id + '" step="10" min="0" value="' + (num(state.zones[z.id]) || '') + '" placeholder="0"></td></tr>';
+  function renderCargo() {
+    $('tblCargo').tBodies[0].innerHTML = state.cargo.length ? state.cargo.map(function (c, i) {
+      var z = zoneOf(num(c.arm));
+      return '<tr data-i="' + i + '">' +
+        '<td><div class="namecell"><span class="tag b">■</span><input type="text" data-k="name" value="' + esc(c.name) + '"></div></td>' +
+        '<td class="w-kg"><input type="number" data-k="w" step="10" min="0" value="' + c.w + '"></td>' +
+        '<td class="w-arm"><input type="number" data-k="arm" step="0.01" value="' + f3(num(c.arm)) + '"></td>' +
+        '<td class="zc">' + (z ? z.id : 'outside') + '</td>' +
+        '<td><button type="button" class="icon no-print" data-del="' + i + '" title="Remove">×</button></td></tr>';
+    }).join('') : '<tr><td colspan="5" class="muted">No payload</td></tr>';
+  }
+
+  function renderZones(r) {
+    $('tblZones').tBodies[0].innerHTML = ZONES.map(function (z) {
+      var w = r.zl.loads[z.id];
+      return '<tr' + (w > z.max ? ' class="hl"' : '') + '><td><b>' + z.id + '</b></td><td class="muted">' + z.from.toFixed(3) + ' – ' + z.to.toFixed(3) + '</td><td class="r">' + z.arm.toFixed(3) +
+        '</td><td class="r muted">' + z.max + '</td><td class="r"' + (w > z.max ? ' style="color:var(--bad);font-weight:700"' : '') + '>' + (w ? f0(w) : '–') + '</td></tr>';
     }).join('');
   }
 
@@ -451,16 +736,16 @@
     $('outPayload').textContent = f0(r.payW);
     $('outLandFuel').textContent = fuelStr(r.landFuel);
 
-    function kpi(id, p, maxW, maxLabel) {
-      var el = $(id), out = r.issues.some(function (i) { return i.lvl === 'bad' && i.msg.indexOf(({ kZfw: 'Zero fuel', kTow: 'Take-off', kLw: 'Landing' })[id]) === 0; });
+    function kpi(id, p, maxW, maxLabel, prefix) {
+      var el = $(id), out = r.issues.some(function (i) { return i.lvl === 'bad' && i.msg.indexOf(prefix) === 0; });
       el.classList.toggle('out', out);
       el.querySelector('.kv').textContent = f0(p.w) + ' kg';
       el.querySelector('.kc').textContent = f1(p.cg) + ' % MAC';
       el.querySelector('.km').textContent = 'Arm ' + f3(p.arm) + ' m · ' + maxLabel + ' ' + f0(maxW) + ' (margin ' + f0(maxW - p.w) + ' kg)';
     }
-    kpi('kZfw', r.zfw, L.mzfw, 'MZFW');
-    kpi('kTow', r.tow, L.mtow, 'MTOW');
-    kpi('kLw', r.lw, L.mlw, 'MLW');
+    kpi('kZfw', r.zfw, L.mzfw, 'MZFW', 'Zero fuel');
+    kpi('kTow', r.tow, L.mtow, 'MTOW', 'Take-off');
+    kpi('kLw', r.lw, L.mlw, 'MLW', 'Landing');
 
     var nBad = r.issues.filter(function (i) { return i.lvl === 'bad'; }).length;
     var nWarn = r.issues.length - nBad;
@@ -478,17 +763,14 @@
         '</td><td class="r">' + f0(row.m) + '</td><td class="r">' + (row.cls === 'sub' ? f1(row.cg) : '') + '</td></tr>';
     }).join('');
 
-    // flag over-limit inputs
-    document.querySelectorAll('[data-zone]').forEach(function (inp) {
-      var z = ZONES.filter(function (z) { return z.id === inp.dataset.zone; })[0];
-      inp.classList.toggle('bad', num(inp.value) > z.max);
-    });
     document.querySelectorAll('[data-fuel]').forEach(function (inp) {
       var d = r.t.fuel[inp.dataset.fuel];
       inp.classList.toggle('bad', num(state.fuel[inp.dataset.fuel]) > d.max + 0.5);
     });
 
+    renderZones(r);
     drawChart(r);
+    if ($('tvsvg')) updateTopDynamic(r);
   }
 
   /* ============================ EVENTS =============================== */
@@ -509,38 +791,55 @@
     $('chkDrop').addEventListener('change', function () { state.drop = this.checked; recalc(); });
     $('inTrip').addEventListener('input', function () { state.trip = fromUnit(num(this.value)); recalc(); });
 
+    // people
     var tp = $('tblPeople');
     tp.addEventListener('input', function (e) {
-      var tr = e.target.closest('tr'), k = e.target.dataset.k; if (!tr || !k) return;
-      var p = state.people[+tr.dataset.i];
-      if (k === 'role') p.role = e.target.value;
-      else if (k === 'w') p.w = num(e.target.value);
-      else if (k === 'arm') p.arm = num(e.target.value);
+      var tr = e.target.closest('tr'), k = e.target.dataset.k; if (!tr || !k || k === 'st') return;
+      var i = +tr.dataset.i, p = state.people[i];
+      if (k === 'role') { p.role = e.target.value; tr.querySelector('.tag').textContent = tagOf(p.role); renderTopItems(); }
+      else if (k === 'w') { p.w = num(e.target.value); renderTopItems(); }
+      else if (k === 'arm') { p.arm = num(e.target.value); p.st = 'CUST'; tr.querySelector('select').value = 'CUST'; renderTopItems(); }
       recalc();
     });
     tp.addEventListener('change', function (e) {
       if (e.target.dataset.k !== 'st') return;
-      var p = state.people[+e.target.closest('tr').dataset.i];
-      if (e.target.value === 'CUST' && p.arm == null) p.arm = stationArm(p);
+      var i = +e.target.closest('tr').dataset.i, p = state.people[i], st = station(e.target.value);
       p.st = e.target.value;
-      renderPeople(); recalc();
+      if (st && st.arm != null) { p.arm = st.arm; p.y = st.y; }
+      syncRowInputs('p', i); renderTopItems(); recalc();
     });
     tp.addEventListener('click', function (e) {
       if (e.target.dataset.del == null) return;
-      state.people.splice(+e.target.dataset.del, 1); renderPeople(); recalc();
+      state.people.splice(+e.target.dataset.del, 1); renderPeople(); renderTopItems(); recalc();
     });
     $('btnAddPerson').addEventListener('click', function () {
       var used = state.people.map(function (p) { return p.st; });
-      var free = STATIONS.filter(function (s) { return /^S\d/.test(s.id) && used.indexOf(s.id) < 0; })[0];
-      state.people.push({ role: 'Passenger', w: 80, st: free ? free.id : 'S1', arm: null });
-      renderPeople(); recalc();
+      var free = STATIONS.filter(function (s) { return s.seat && used.indexOf(s.id) < 0; })[0] || station('S1');
+      state.people.push({ role: 'Passenger ' + (state.people.length + 1), w: 80, st: free.id, arm: free.arm, y: free.y });
+      renderPeople(); renderTopItems(); recalc();
     });
 
-    $('tblZones').addEventListener('input', function (e) {
-      var z = e.target.dataset.zone; if (!z) return;
-      state.zones[z] = num(e.target.value); recalc();
+    // chemical boxes
+    var tc = $('tblCargo');
+    tc.addEventListener('input', function (e) {
+      var tr = e.target.closest('tr'), k = e.target.dataset.k; if (!tr || !k) return;
+      var i = +tr.dataset.i, c = state.cargo[i];
+      if (k === 'name') c.name = e.target.value;
+      else if (k === 'w') c.w = num(e.target.value);
+      else if (k === 'arm') { c.arm = num(e.target.value); syncRowInputs('c', i); }
+      renderTopItems(); recalc();
+    });
+    tc.addEventListener('click', function (e) {
+      if (e.target.dataset.del == null) return;
+      state.cargo.splice(+e.target.dataset.del, 1); renderCargo(); renderTopItems(); recalc();
+    });
+    $('btnAddBox').addEventListener('click', function () {
+      var n = state.cargo.length + 1;
+      state.cargo.push({ name: 'Chemical ' + n, w: 250, arm: 7.666, y: 0 });
+      renderCargo(); renderTopItems(); recalc();
     });
 
+    // other items
     var ti = $('tblItems');
     ti.addEventListener('input', function (e) {
       var tr = e.target.closest('tr'), k = e.target.dataset.k; if (!tr || !k) return;
@@ -556,6 +855,7 @@
       state.items.push({ desc: 'Equipment', w: 0, arm: 6.0 }); renderItems(); recalc();
     });
 
+    // fuel
     $('tblFuel').addEventListener('input', function (e) {
       var k = e.target.dataset.fuel; if (!k) return;
       state.fuel[k] = fromUnit(num(e.target.value)); recalc();
@@ -573,7 +873,7 @@
       var ac = { reg: state.reg, type: state.type, bew: state.bew, arm: state.bewArm };
       state = rainState(ac, state);
       renderAll();
-      toast('Rainmaking default loaded: 4 persons (320 kg), 1000 kg payload, full wing tanks.');
+      toast('Rainmaking default loaded: 6 persons (480 kg), 1000 kg chemical payload, full wing tanks.');
     });
     $('btnPrint').addEventListener('click', function () { window.print(); });
     $('btnSave').addEventListener('click', saveLog);
@@ -591,6 +891,8 @@
       if (e.target.dataset.del == null) return;
       fleetDraft.splice(+e.target.dataset.del, 1); renderFleet();
     });
+
+    bindTopView();
   }
 
   function clampFuel() {
@@ -681,6 +983,6 @@
   state = rainState(fleet[0]);
   bind();
   renderAll();
-  window.__c212 = { compute: compute, getState: function () { return state; }, TYPES: TYPES };
+  window.__c212 = { compute: compute, getState: function () { return state; }, TYPES: TYPES, placeItem: placeItem };
 })();
 </script>

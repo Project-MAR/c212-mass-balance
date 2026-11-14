@@ -17,7 +17,7 @@
       </div>
     </div>
     <div class="actions no-print">
-      <button type="button" id="btnDefault" class="ghost" title="Rainmaking default: 4 people (320 kg), 1000 kg payload, full tanks">Rainmaking default</button>
+      <button type="button" id="btnDefault" class="ghost" title="Rainmaking default: pilot, co-pilot, flight engineer, 2 chemical operators, scientist (480 kg); 1000 kg chemical; full tanks">Rainmaking default</button>
       <button type="button" id="btnFleet" class="ghost">Fleet</button>
       <button type="button" id="btnSave" class="ghost">Save to log</button>
       <button type="button" id="btnPrint" class="primary">Print</button>
@@ -25,6 +25,20 @@
   </header>
 
   <main class="layout">
+    <!-- ================= TOP VIEW ================= -->
+    <section class="card full topcard">
+      <div class="charthead">
+        <h2>Aircraft top view · loading layout</h2>
+        <div class="legend">
+          <span><i class="lg-person"></i>Person (drag)</span>
+          <span><i class="lg-box"></i>Chemical box (drag)</span>
+          <span><i style="background:var(--tow)"></i>Take-off CG</span>
+        </div>
+      </div>
+      <div id="topview"></div>
+      <p class="hint no-print">Drag a circle (person) or box (chemical) to move it, or click it and use the arrow keys (0.05 m steps; Shift = 0.01 m). Arms are metres aft of the datum; numbers under each zone are its centroid arm. Side-to-side position is for the layout picture only; the longitudinal CG is what is calculated.</p>
+    </section>
+
     <!-- ================= INPUTS ================= -->
     <section class="col inputs">
       <div class="card">
@@ -52,7 +66,7 @@
       <div class="card">
         <h2><span class="num">2</span>Crew &amp; persons on board</h2>
         <table class="tbl" id="tblPeople">
-          <thead><tr><th>Person</th><th class="r">kg</th><th>Station</th><th class="r">Arm m</th><th></th></tr></thead>
+          <thead><tr><th>Person</th><th class="r">kg</th><th>Seat / station</th><th class="r">Arm m</th><th></th></tr></thead>
           <tbody></tbody>
         </table>
         <div class="rowbtns no-print">
@@ -62,15 +76,21 @@
       </div>
 
       <div class="card">
-        <h2><span class="num">3</span>Payload (cargo zones)</h2>
-        <table class="tbl" id="tblZones">
-          <thead><tr><th>Zone</th><th>Frames</th><th class="r">Arm m</th><th class="r">Max kg</th><th class="r">Load kg</th></tr></thead>
+        <h2><span class="num">3</span>Payload (chemical boxes)</h2>
+        <table class="tbl" id="tblCargo">
+          <thead><tr><th>Item</th><th class="r">kg</th><th class="r">Arm m</th><th>Zone</th><th></th></tr></thead>
           <tbody></tbody>
         </table>
         <div class="rowbtns">
-          <label class="check"><input type="checkbox" id="chkDrop"> Payload dispensed before landing (seeding chemical)</label>
+          <button type="button" class="ghost sm no-print" id="btnAddBox">+ Add chemical box</button>
           <span class="total">Payload <b id="outPayload">0</b> kg</span>
         </div>
+        <label class="check mt"><input type="checkbox" id="chkDrop"> Payload dispensed before landing (seeding chemical)</label>
+        <h3 class="subhead">Cargo zone loading</h3>
+        <table class="tbl" id="tblZones">
+          <thead><tr><th>Zone</th><th>Section (arm m)</th><th class="r">Centroid m</th><th class="r">Max kg</th><th class="r">Load kg</th></tr></thead>
+          <tbody></tbody>
+        </table>
         <details class="mt">
           <summary>Other items (equipment, baggage, ballast)</summary>
           <table class="tbl" id="tblItems">

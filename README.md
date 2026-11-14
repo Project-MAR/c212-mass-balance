@@ -2,7 +2,9 @@
 
 Calculates the load sheet, shows the **actual CG** (% MAC and arm) at zero-fuel, take-off and landing, and plots them, with the fuel-burn path, on the weight–CG envelope.
 
-Default mission (the **Rainmaking default** button): 4 persons × 80 kg = 320 kg (pilot, co-pilot, 3rd-crew seat, chemical operator in cabin seat 1), 1 000 kg of payload (500 kg in zone III and 500 kg in zone IV), full wing tanks, 900 kg trip fuel, payload dispensed before landing.
+Default mission (the **Rainmaking default** button): 6 persons × 80 kg = 480 kg (pilot, co-pilot, flight engineer, 2 chemical operators in cabin seats 15/16, scientist in cabin seat 1), 1 000 kg of chemical in four 250 kg boxes (2 in zone III, 2 in zone IV), full wing tanks, 900 kg trip fuel, payload dispensed before landing.
+
+**Top view:** a scaled plan view (nose left) with an arm ruler, cargo zones I–VI and A with their boundaries and centroid arms, crew/cabin seats, fuel-tank arms, the MAC bar with the allowed CG range at take-off weight, and the actual CG lines. People (circles) and chemical boxes (squares) can be dragged anywhere in the cabin, or nudged with the arrow keys; the load sheet, zone loading and envelope graph update live.
 
 ## Files
 | File | Purpose |

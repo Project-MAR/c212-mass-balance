@@ -127,6 +127,21 @@
   #chart svg { width: 100%; height: auto; display: block; }
   #chart text { font-family: inherit; }
 
+  .full { grid-column: 1 / -1; }
+  .subhead { font-size: 12px; text-transform: uppercase; letter-spacing: .4px; color: var(--ink-3); margin: 14px 0 4px; }
+  #topview svg { width: 100%; height: auto; display: block; touch-action: none; user-select: none; -webkit-user-select: none; }
+  #topview .dr { cursor: grab; }
+  #topview .dr:focus { outline: none; }
+  #topview .dr:focus .shape, #topview .dr.sel .shape { stroke: #111; stroke-width: 2.5; }
+  #topview .dr.dragging { cursor: grabbing; }
+  .lg-person { background: #2563eb; border-radius: 50% !important; }
+  .lg-box { background: #d97706; }
+  .tbl tr.hl td { background: #fff7e6; }
+  .tag { display: inline-block; min-width: 26px; text-align: center; font-size: 11px; font-weight: 700; color: #fff; border-radius: 10px; padding: 1px 5px; margin-right: 6px; }
+  .tag.p { background: #2563eb; }
+  .tag.b { background: #d97706; border-radius: 3px; }
+  .namecell { display: flex; align-items: center; }
+
   .warnings { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
   .warnings li { border-radius: 8px; padding: 8px 12px; font-size: 13px; }
   .warnings li.bad { background: var(--bad-bg); color: var(--bad); }
