@@ -114,9 +114,12 @@
           <tbody></tbody>
         </table>
         <div class="grid2 mt">
-          <label><span>Trip fuel burn (<span class="fu">kg</span>)</span> <input type="number" id="inTrip" step="10" min="0"></label>
+          <label><span>Flight time (h)</span> <input type="number" id="inTime" step="0.1" min="0"></label>
+          <label><span>Fuel flow (<span class="fu">kg</span>/h)</span> <input type="number" id="inFlow" step="10" min="0"></label>
+          <div class="readout"><span>Trip fuel</span><b id="outTrip">–</b></div>
           <div class="readout"><span>Fuel at landing</span><b id="outLandFuel">–</b></div>
         </div>
+        <p class="hint">Default fuel flow 380 kg/h ≈ 830 lb/h (maximum cruise, NC212i ground school: 1 400 lb in 101 min). Set your own typical rainmaking figure.</p>
         <p class="hint">Burn order used for the CG trace: underwing → outboard → inboard (outboard fuel transfers to keep inboard tanks full).</p>
       </div>
     </section>

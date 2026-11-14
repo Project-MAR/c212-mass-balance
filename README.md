@@ -2,7 +2,7 @@
 
 Calculates the load sheet, shows the **actual CG** (% MAC and arm) at zero-fuel, take-off and landing, and plots them, with the fuel-burn path, on the weight–CG envelope.
 
-Default mission (the **Rainmaking default** button): 6 persons × 80 kg = 480 kg (pilot, co-pilot, flight engineer, and in zone II: 2 chemical operators in cabin seats 5/6 and the scientist in cabin seat 4), 1 000 kg of chemical in four 250 kg boxes (2 in zone III, 2 in zone IV), full wing tanks, 900 kg trip fuel, payload dispensed before landing.
+Default mission (the **Rainmaking default** button): 6 persons × 80 kg = 480 kg (pilot, co-pilot, flight engineer, and in zone II: 2 chemical operators in cabin seats 5/6 and the scientist in cabin seat 4), 1 000 kg of chemical in four 250 kg boxes (2 in zone III, 2 in zone IV), full wing tanks, 1.5 h flight at 380 kg/h (≈ 570 kg trip fuel; maximum-cruise flow from the NC212i ground-school deck), payload dispensed before landing. Flight time and fuel flow are editable.
 
 **Top view:** a scaled plan view (nose left) with an arm ruler, cargo zones I–VI and A with their boundaries and centroid arms, crew/cabin seats, fuel-tank arms, the MAC bar with the allowed CG range at take-off weight, and the actual CG lines. People (circles) and chemical boxes (squares) can be dragged anywhere in the cabin, or nudged with the arrow keys; the load sheet, zone loading and envelope graph update live.
 
@@ -36,7 +36,8 @@ The first **Save to log** creates a spreadsheet named *C-212 Mass & Balance Log*
 | C-212-300 military, normal role (default) | MTOW 8 100, MLW 8 100, MZFW 7 100, min 4 300 kg; fwd 15 % (≤5 013) → 16 % (7 700–8 100); aft 30 % to 8 000 kg, 27 % at 8 100 kg | QRH C-212-300 Rev 4 (Jul 2019) LD-2, LD-4 |
 | C-212-300 civil | MTOW 7 700, MLW 7 450, MZFW 7 100, min 4 300 kg; CG 15 %→16 % fwd, 30 % aft; fuel 1 556 kg | AFM C-212-DF D.T.88-2508 Sect. 1 |
 | C-212-400 military | MTOW/MLW 8 100, MZFW 7 500 kg; aft limit 27 % at 8 100 kg | AOM C-212-400M AB73; W&B Manual 1-10 |
-| C-212-400 FAR 25 / NC212i | MTOW 7 700, MLW 7 450, MZFW 7 100, min 4 700 kg; fwd 12 % (≤6 500) → 16 % (7 700), aft 30 % | W&B Manual 1-10; AOM NC-212i EE92 Table 1-1 |
+| NC212i military, normal role (default) | MTOW/MLW 8 100, MZFW 7 500, ramp 8 150, min 4 700 kg; same CG envelope as C-212-400 military | AOM Supplement NC212i NTH2 / Appendix A 12M.0001.177A Table 1-1 |
+| C-212-400 FAR 25 / NC212i civil | MTOW 7 700, MLW 7 450, MZFW 7 100, min 4 700 kg; fwd 12 % (≤6 500) → 16 % (7 700), aft 30 % | W&B Manual 1-10; AOM NC-212i EE92 Table 1-1 |
 
 **Assumption:** the C-212-300 tank arms and cargo zones are taken from the C-212-400 manual because the two have the same wing and fuselage. Check these against the -300 W&B data if it is available.
 

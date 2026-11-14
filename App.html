@@ -39,7 +39,14 @@
       fuel: { inb: { arm: 6.26, max: 1090 }, outb: { arm: 6.17, max: 470 }, uw: { arm: 5.90, max: 770 } }
     },
     NC212I: {
-      name: 'NC212i (C-212-400i)',
+      name: 'NC212i – military (normal role)',
+      source: 'AOM Supplement NC212i NTH2 / Appendix A 12M.0001.177A Table 1-1 (normal role, 2.5 g); CG limits from NC212i WAB ground-school table (8100 kg: 16–27 %MAC); fuel AOM EE92 Table 1-10.',
+      limits: { ramp: 8150, mtow: 8100, mlw: 8100, mzfw: 7500, minw: 4700 },
+      env: { fwd: [[4700, 12.0], [6500, 12.0], [7700, 16.0], [8100, 16.0]], aft: [[4700, 30.0], [7700, 30.0], [8100, 27.0]] },
+      fuel: { inb: { arm: 6.26, max: 1090 }, outb: { arm: 6.17, max: 470 }, uw: { arm: 5.90, max: 770 } }
+    },
+    NC212I_C: {
+      name: 'NC212i – civil (AOM)',
       source: 'AOM NC-212i-400 EE92 Vol II §1 (Table 1-1, Table 1-10) and NC212i WAB ground-school CG table.',
       limits: { ramp: 7750, mtow: 7700, mlw: 7450, mzfw: 7100, minw: 4700 },
       env: { fwd: [[4700, 12.0], [6500, 12.0], [7700, 16.0]], aft: [[4700, 30.0], [7700, 30.0]] },
@@ -98,7 +105,8 @@
       { name: 'Chemical 3', w: 250, arm: 6.506, y: 0.42 },
       { name: 'Chemical 4', w: 250, arm: 6.506, y: -0.42 }
     ],
-    trip: 900
+    time: 1.5,   // flight time (h)
+    flow: 380    // total fuel flow (kg/h): max cruise ≈ 1400 lb / 101 min (NC212i WAB & Performance)
   };
 
   var HAS_GAS = typeof google !== 'undefined' && google.script && google.script.run;
@@ -135,7 +143,8 @@
       cargo: RAIN.cargo.map(function (c) { return Object.assign({}, c); }),
       items: [],
       fuel: { inb: t.fuel.inb.max, outb: t.fuel.outb.max, uw: 0 },
-      trip: RAIN.trip,
+      time: RAIN.time,
+      flow: RAIN.flow,
       drop: true,
       unit: keep.unit || 'kg'
     };
@@ -154,6 +163,7 @@
   function fromUnit(v) { return state.unit === 'lb' ? v / KG2LB : v; }
   function fuelStr(kg) { return f0(kg) + ' kg / ' + f0(kg * KG2LB) + ' lb'; }
   function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+  function tripKg() { return num(state.time) * num(state.flow); }
 
   /** Short tag drawn inside a person's circle: "Pilot" → P, "Co-pilot" → CP, "Chemical operator 1" → CO1. */
   function tagOf(role) {
@@ -243,7 +253,7 @@
     var tow = { w: W, m: M };
     var fuelTot = fuel.inb + fuel.outb + fuel.uw;
 
-    var trip = Math.min(num(state.trip), fuelTot);
+    var trip = Math.min(tripKg(), fuelTot);
     var landFuel = burnFuel(fuel, trip);
     var lf = fuelMass(t, landFuel);
     var full = fuelMass(t, fuel);
@@ -310,8 +320,8 @@
     });
     if (fuel.outb > 0 && fuel.inb < t.fuel.inb.max - 1) warn('Inboard tanks should be filled before outboard tanks.');
     if (t.fuel.uw && fuel.uw > 0 && (fuel.inb < t.fuel.inb.max - 1 || fuel.outb < t.fuel.outb.max - 1)) warn('Underwing tanks may only be loaded with full wing tanks.');
-    if (num(state.trip) > r.fuelTot) bad('Trip fuel (' + f0(num(state.trip)) + ' kg) is more than the fuel on board.');
-    if (r.landFuel < 1 && r.fuelTot > 0 && num(state.trip) > 0) bad('No fuel remaining at landing.');
+    if (tripKg() > r.fuelTot) bad('Trip fuel (' + f0(tripKg()) + ' kg) is more than the fuel on board.');
+    if (r.landFuel < 1 && r.fuelTot > 0 && tripKg() > 0) bad('No fuel remaining at landing.');
   }
 
   /* ============================== CHART ============================== */
@@ -728,7 +738,8 @@
       return '<tr><td>' + r[1] + '</td><td class="r">' + d.arm.toFixed(2) + '</td><td class="r muted">' + f0(toUnit(d.max)) + ' ' + u +
         '</td><td class="w-kg"><input type="number" data-fuel="' + r[0] + '" step="' + (u === 'lb' ? 10 : 5) + '" min="0" value="' + Math.round(toUnit(num(state.fuel[r[0]]))) + '"></td></tr>';
     }).join('');
-    $('inTrip').value = Math.round(toUnit(num(state.trip)));
+    $('inTime').value = state.time;
+    $('inFlow').value = Math.round(toUnit(num(state.flow)));
     document.querySelectorAll('.fu').forEach(function (e) { e.textContent = u; });
   }
 
@@ -742,6 +753,7 @@
     $('outPeople').textContent = f0(r.peopleW);
     $('outPayload').textContent = f0(r.payW);
     $('outLandFuel').textContent = fuelStr(r.landFuel);
+    $('outTrip').textContent = fuelStr(r.trip);
 
     function kpi(id, p, maxW, maxLabel, prefix) {
       var el = $(id), out = r.issues.some(function (i) { return i.lvl === 'bad' && i.msg.indexOf(prefix) === 0; });
@@ -796,7 +808,8 @@
     $('inBew').addEventListener('input', function () { state.bew = num(this.value); recalc(); });
     $('inBewArm').addEventListener('input', function () { state.bewArm = num(this.value); recalc(); });
     $('chkDrop').addEventListener('change', function () { state.drop = this.checked; recalc(); });
-    $('inTrip').addEventListener('input', function () { state.trip = fromUnit(num(this.value)); recalc(); });
+    $('inTime').addEventListener('input', function () { state.time = num(this.value); recalc(); });
+    $('inFlow').addEventListener('input', function () { state.flow = fromUnit(num(this.value)); recalc(); });
 
     // people
     var tp = $('tblPeople');
