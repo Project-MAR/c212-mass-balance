@@ -871,7 +871,7 @@
     $('toModeWrap').style.display = sp.tactical ? '' : 'none';
     var notes = ['V1 shown equal to VR (the QRH gives no separate V1; with crosswind above 20 kt V1 = VR is required).',
       'VAPP = VREF + ΔV flap + ADD; VMAN = VAPP + 10; ADD = ½ uniform wind + gust (max 10 kt). ΔV flap: 0 kt above 70 %, 8 kt for 20–70 %, 16 kt at 20 % or less.'];
-    if (sp === SPD400) notes.push('"60 %" is not a TO/APP or LDG lever position on the C-212-400 / NC212i; it is shown with the 20–70 % increment.');
+    notes.push('Flap 60 % is the mission-specific rainmaking setting; no dedicated QRH table exists, so its speeds use the 20–70 % increment (+8 kt).');
     $('spdNotes').innerHTML = s.notes.map(function (n) { return '<li class="warn">' + esc(n) + '</li>'; }).join('') +
       notes.map(function (n) { return '<li>' + esc(n) + '</li>'; }).join('') + '<li>Source: ' + esc(sp.source) + '.</li>';
   }
