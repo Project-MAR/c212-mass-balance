@@ -134,6 +134,29 @@
         <div class="kpi" id="kLw"><div class="kl">Landing weight</div><div class="kv">–</div><div class="kc">–</div><div class="km">–</div></div>
       </div>
 
+      <div class="card" id="speedCard">
+        <h2>Speeds (KIAS) for this weight</h2>
+        <div class="grid5">
+          <label>Field elevation (ft) <input type="number" id="inElev" step="100"></label>
+          <label>OAT (°C) <input type="number" id="inOat" step="1"></label>
+          <label id="toModeWrap">Take-off <select id="selToMode"><option value="normal">Normal T.O.</option><option value="tactical">Tactical T.O.</option></select></label>
+          <label>Wind (kt) <input type="number" id="inWind" step="1" min="0"></label>
+          <label>Gust (kt) <input type="number" id="inGust" step="1" min="0"></label>
+        </div>
+        <div class="spdgrid">
+          <div>
+            <h3 class="subhead">Take-off · <span id="spdToHdr"></span></h3>
+            <div class="vtiles" id="spdTo"></div>
+          </div>
+          <div>
+            <h3 class="subhead">Approach &amp; landing · <span id="spdLdHdr"></span></h3>
+            <div class="vtiles" id="spdRef"></div>
+            <table class="tbl mt" id="tblApp"></table>
+          </div>
+        </div>
+        <ul class="spdnotes" id="spdNotes"></ul>
+      </div>
+
       <div class="card chartcard">
         <div class="charthead">
           <h2>Weight vs CG envelope</h2>

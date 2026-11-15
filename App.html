@@ -54,6 +54,55 @@
     }
   };
 
+  /* ---------- Speeds (KIAS) ----------
+   * Tables: weight (t) → speed. MIN VR / MIN V2 limited by VMCA: rows = altitude (ft),
+   * columns = OAT (°C); null = "-" in the QRH (VMCA not limiting there).
+   */
+  var SPD300 = {
+    source: 'QRH C-212-300 (C.L. C212DF-AA73-1) PD-2 Takeoff, PD-3 Descent and Landing',
+    toFlap: '25 %', ldgFlap: '100 %',
+    normal: {
+      w: [5, 5.5, 6, 6.5, 7, 7.5, 7.7],
+      vr: [75, 79, 82, 86, 89, 92, 93], v2: [77, 80, 84, 87, 91, 94, 95],
+      fret: [85, 88, 92, 95, 99, 102, 103], vfto: [91, 94, 98, 101, 105, 108, 109],
+      alt: [0, 2000, 4000], oat: [-10, 20, 30, 40],
+      minVr: [[85, 83, 81, 78], [83, 81, 78, 74], [82, 78, 74, 70]],
+      minV2: [[89, 86, 84, 80], [87, 84, 80, 76], [85, 80, 76, 71]]
+    },
+    tactical: null,
+    ldg: { w: [5, 5.5, 6, 6.5, 7, 7.5], vref: [76, 80, 83, 87, 90, 93] }
+  };
+  var MIN400 = {
+    alt: [0, 4000, 8000, 12000], oat: [-10, 20, 30, 40],
+    minVr: [[85, 83, 82, 80], [82, 80, 77, 73], [78, 72, null, null], [null, null, null, null]],
+    minV2: [[88, 85, 84, 82], [84, 81, 78, 73], [79, 72, null, null], [null, null, null, null]]
+  };
+  var SPD400 = {
+    source: 'QRH C-212-400M AB73-1 / QRH NC212i NTH1 PD-2 Takeoff speeds, PD-22 Approach and landing speeds',
+    toFlap: 'TO/APP', ldgFlap: 'LDG',
+    normal: Object.assign({
+      w: [5, 5.5, 6, 6.5, 7, 7.5, 8.1],
+      vr: [76, 79, 82, 85, 88, 91, 95], v2: [77, 80, 84, 87, 90, 94, 97],
+      fret: null, vfto: [90, 90, 92, 95, 99, 102, 106]
+    }, MIN400),
+    tactical: {
+      w: [5, 5.5, 6, 6.5, 7, 7.5, 8.1],
+      vr: [66, 69, 72, 74, 77, 79, 82], v2: [77, 80, 84, 87, 90, 94, 97],
+      fret: null, vfto: [90, 90, 92, 95, 99, 102, 106],
+      alt: [0, 4000, 8000, 12000], oat: [-10, 20, 30, 40],
+      minVr: [[78, 76, 75, 73], [75, 72, 70, 68], [71, 68, 66, null], [67, null, null, null]],
+      minV2: MIN400.minV2
+    },
+    ldg: { w: [5, 5.5, 6, 6.5, 7, 7.5, 8.0], vref: [76, 80, 83, 87, 90, 93, 96] }
+  };
+  var SPEEDS_BY_TYPE = { C212_300: SPD300, C212_300C: SPD300, C212_400M: SPD400, C212_400C: SPD400, NC212I: SPD400, NC212I_C: SPD400 };
+  // Approach flap settings shown in the landing table: ΔVFLAP per QRH (0 kt > 70 %, 8 kt 20–70 %, 16 kt ≤ 20 %)
+  var APP_FLAPS = [
+    { id: 'APP', label: 'APP', dv: 8 },
+    { id: '60',  label: '60 %', dv: 8 },
+    { id: 'LDG', label: 'LDG', dv: 0 }
+  ];
+
   // Seats / stations (arm from the NC212i seat map & W&B manual; y = layout position)
   var STATIONS = [
     { id: 'PIL', label: 'Pilot seat', arm: 2.050, y: -0.5 },
@@ -146,6 +195,8 @@
       time: RAIN.time,
       flow: RAIN.flow,
       drop: true,
+      elev: keep.elev != null ? keep.elev : 0, oat: keep.oat != null ? keep.oat : 30,
+      toMode: keep.toMode || 'normal', wind: 0, gust: 0,
       unit: keep.unit || 'kg'
     };
   }
@@ -209,6 +260,62 @@
       w += f[k] || 0; m += (f[k] || 0) * t.fuel[k].arm;
     });
     return { w: w, m: m };
+  }
+
+  /* ============================== SPEEDS ============================= */
+  /** Speed from a weight table (weights in tonnes); extrapolates linearly above the last column. */
+  function spdTable(ws, vs, kg) {
+    var w = kg / 1000, n = ws.length;
+    if (w <= ws[0]) return { v: vs[0], ext: w < ws[0] - 1e-9 ? 'below' : '' };
+    for (var i = 1; i < n; i++) if (w <= ws[i] + 1e-9) return { v: vs[i - 1] + (vs[i] - vs[i - 1]) * (w - ws[i - 1]) / (ws[i] - ws[i - 1]), ext: '' };
+    return { v: vs[n - 1] + (vs[n - 1] - vs[n - 2]) * (w - ws[n - 1]) / (ws[n - 1] - ws[n - 2]), ext: 'above' };
+  }
+  /** VMCA-limited minimum (alt rows × OAT columns); null where the QRH shows "-". */
+  function minLimit(m, rows, alt, oat) {
+    var o = clamp(oat, m.oat[0], m.oat[m.oat.length - 1]);
+    function atOat(row) {
+      for (var j = 0; j < m.oat.length; j++) {
+        if (Math.abs(o - m.oat[j]) < 1e-9) return row[j];
+        if (j > 0 && o < m.oat[j]) {
+          var a = row[j - 1], b = row[j];
+          return (a == null || b == null) ? null : a + (b - a) * (o - m.oat[j - 1]) / (m.oat[j] - m.oat[j - 1]);
+        }
+      }
+      return row[row.length - 1];
+    }
+    var h = clamp(alt, m.alt[0], m.alt[m.alt.length - 1]);
+    for (var i = 0; i < m.alt.length; i++) {
+      if (Math.abs(h - m.alt[i]) < 1e-9) return atOat(rows[i]);
+      if (i > 0 && h < m.alt[i]) {
+        var lo = atOat(rows[i - 1]), hi = atOat(rows[i]);
+        if (lo != null && hi != null) return lo + (hi - lo) * (h - m.alt[i - 1]) / (m.alt[i] - m.alt[i - 1]);
+        return lo != null ? lo : hi;   // use the available (lower-altitude, higher) value
+      }
+    }
+    return atOat(rows[rows.length - 1]);
+  }
+  function computeSpeeds(r) {
+    var sp = SPEEDS_BY_TYPE[state.type], tactical = sp.tactical && state.toMode === 'tactical';
+    var m = tactical ? sp.tactical : sp.normal, notes = [];
+    var W = r.tow.w, elev = num(state.elev), oat = num(state.oat);
+    var vr = spdTable(m.w, m.vr, W), v2 = spdTable(m.w, m.v2, W), vfto = spdTable(m.w, m.vfto, W);
+    var fret = m.fret ? spdTable(m.w, m.fret, W) : null;
+    var mvr = minLimit(m, m.minVr, elev, oat), mv2 = minLimit(m, m.minV2, elev, oat);
+    var VR = Math.max(Math.round(vr.v), mvr ? Math.ceil(mvr - 1e-9) : 0), V2 = Math.max(Math.round(v2.v), mv2 ? Math.ceil(mv2 - 1e-9) : 0);
+    if (mvr && mvr > vr.v) notes.push('VR raised to the VMCA minimum (' + Math.ceil(mvr) + ' kt) for ' + f0(elev) + ' ft / ' + oat + ' °C.');
+    if (mv2 && mv2 > v2.v) notes.push('V2 raised to the VMCA minimum (' + Math.ceil(mv2) + ' kt) for ' + f0(elev) + ' ft / ' + oat + ' °C.');
+    if (vr.ext === 'above') notes.push('Take-off weight ' + f0(W) + ' kg is above the QRH take-off table (' + m.w[m.w.length - 1] + ' t) – speeds extrapolated.');
+    if (elev > m.alt[m.alt.length - 1] || oat < m.oat[0] || oat > m.oat[m.oat.length - 1]) notes.push('Elevation/OAT outside the VMCA table – nearest values used.');
+
+    var ref = spdTable(sp.ldg.w, sp.ldg.vref, r.lw.w), VREF = Math.round(ref.v);
+    if (ref.ext === 'above') notes.push('Landing weight ' + f0(r.lw.w) + ' kg is above the QRH landing table (' + sp.ldg.w[sp.ldg.w.length - 1] + ' t) – VREF extrapolated.');
+    var add = Math.min(10, 0.5 * Math.max(0, num(state.wind)) + Math.max(0, num(state.gust)));
+    var app = APP_FLAPS.map(function (f) {
+      var vapp = VREF + f.dv + Math.max(0, Math.ceil(add - 1e-9));
+      return { id: f.id, label: f.label, dv: f.dv, vapp: vapp, vman: vapp + 10 };
+    });
+    return { sp: sp, tactical: tactical, V1: VR, VR: VR, V2: V2, VFTO: Math.round(vfto.v), FRET: fret ? Math.round(fret.v) : null,
+             VREF: VREF, add: add, app: app, notes: notes };
   }
 
   /* ============================ CALCULATE ============================ */
@@ -680,6 +787,9 @@
     $('inBew').value = state.bew;
     $('inBewArm').value = state.bewArm;
     $('chkDrop').checked = !!state.drop;
+    $('inElev').value = state.elev; $('inOat').value = state.oat;
+    $('inWind').value = state.wind; $('inGust').value = state.gust;
+    $('selToMode').value = state.toMode;
     document.querySelectorAll('input[name=fuelUnit]').forEach(function (r) { r.checked = r.value === state.unit; });
   }
 
@@ -743,6 +853,29 @@
     document.querySelectorAll('.fu').forEach(function (e) { e.textContent = u; });
   }
 
+  function renderSpeeds(r) {
+    var s = computeSpeeds(r), sp = s.sp;
+    r.speeds = s;
+    function tile(label, v, cls) { return '<div class="vt' + (cls ? ' ' + cls : '') + '"><span>' + label + '</span><b>' + v + '</b></div>'; }
+    $('spdToHdr').textContent = f0(r.tow.w) + ' kg · flaps ' + sp.toFlap + (s.tactical ? ' · tactical' : '');
+    $('spdTo').innerHTML = tile('V1', s.V1) + tile('VR', s.VR) + tile('V2', s.V2, 'hl') +
+      (s.FRET ? tile('Flaps ret.', s.FRET) : '') + tile('VFTO', s.VFTO);
+    $('spdLdHdr').textContent = f0(r.lw.w) + ' kg · ADD ' + Math.max(0, Math.ceil(s.add - 1e-9)) + ' kt';
+    $('spdRef').innerHTML = tile('VREF · flaps ' + sp.ldgFlap, s.VREF, 'hl');
+    $('tblApp').innerHTML = '<thead><tr><th>Approach flap</th>' + s.app.map(function (a) {
+        return '<th class="r">' + a.label + (a.id === 'APP' && sp.toFlap !== 'TO/APP' ? ' <span class="muted">(' + sp.toFlap + ')</span>' : a.id === 'LDG' && sp.ldgFlap !== 'LDG' ? ' <span class="muted">(' + sp.ldgFlap + ')</span>' : '') + '</th>';
+      }).join('') + '</tr></thead><tbody>' +
+      '<tr><td>ΔV flap</td>' + s.app.map(function (a) { return '<td class="r muted">+' + a.dv + '</td>'; }).join('') + '</tr>' +
+      '<tr><td><b>VAPP</b></td>' + s.app.map(function (a) { return '<td class="r"><b>' + a.vapp + '</b></td>'; }).join('') + '</tr>' +
+      '<tr><td><b>VMAN</b></td>' + s.app.map(function (a) { return '<td class="r"><b>' + a.vman + '</b></td>'; }).join('') + '</tr></tbody>';
+    $('toModeWrap').style.display = sp.tactical ? '' : 'none';
+    var notes = ['V1 shown equal to VR (the QRH gives no separate V1; with crosswind above 20 kt V1 = VR is required).',
+      'VAPP = VREF + ΔV flap + ADD; VMAN = VAPP + 10; ADD = ½ uniform wind + gust (max 10 kt). ΔV flap: 0 kt above 70 %, 8 kt for 20–70 %, 16 kt at 20 % or less.'];
+    if (sp === SPD400) notes.push('"60 %" is not a TO/APP or LDG lever position on the C-212-400 / NC212i; it is shown with the 20–70 % increment.');
+    $('spdNotes').innerHTML = s.notes.map(function (n) { return '<li class="warn">' + esc(n) + '</li>'; }).join('') +
+      notes.map(function (n) { return '<li>' + esc(n) + '</li>'; }).join('') + '<li>Source: ' + esc(sp.source) + '.</li>';
+  }
+
   var lastResult = null;
   function recalc() {
     var r = compute();
@@ -788,6 +921,7 @@
     });
 
     renderZones(r);
+    renderSpeeds(r);
     drawChart(r);
     if ($('tvsvg')) updateTopDynamic(r);
   }
@@ -808,6 +942,11 @@
     $('inBew').addEventListener('input', function () { state.bew = num(this.value); recalc(); });
     $('inBewArm').addEventListener('input', function () { state.bewArm = num(this.value); recalc(); });
     $('chkDrop').addEventListener('change', function () { state.drop = this.checked; recalc(); });
+    $('inElev').addEventListener('input', function () { state.elev = num(this.value); recalc(); });
+    $('inOat').addEventListener('input', function () { state.oat = num(this.value); recalc(); });
+    $('inWind').addEventListener('input', function () { state.wind = num(this.value); recalc(); });
+    $('inGust').addEventListener('input', function () { state.gust = num(this.value); recalc(); });
+    $('selToMode').addEventListener('change', function () { state.toMode = this.value; recalc(); });
     $('inTime').addEventListener('input', function () { state.time = num(this.value); recalc(); });
     $('inFlow').addEventListener('input', function () { state.flow = fromUnit(num(this.value)); recalc(); });
 
@@ -1003,6 +1142,6 @@
   state = rainState(fleet[0]);
   bind();
   renderAll();
-  window.__c212 = { compute: compute, getState: function () { return state; }, TYPES: TYPES, placeItem: placeItem };
+  window.__c212 = { compute: compute, computeSpeeds: computeSpeeds, getState: function () { return state; }, TYPES: TYPES, placeItem: placeItem };
 })();
 </script>

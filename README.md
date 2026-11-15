@@ -42,3 +42,16 @@ The first **Save to log** creates a spreadsheet named *C-212 Mass & Balance Log*
 **Assumption:** the C-212-300 tank arms and cargo zones are taken from the C-212-400 manual because the two have the same wing and fuselage. Check these against the -300 W&B data if it is available.
 
 This is a planning and training aid. Always check against the current approved AFM/AOM and the aircraft's own weighing report.
+
+## Speeds (KIAS)
+Computed for the actual take-off and landing weights:
+
+- **Take-off:** V1, VR, V2, VFTO (and flap-retraction speed on the C-212-300). VR and V2 are interpolated by weight and raised to the VMCA-limited minimum for the field elevation and OAT. V1 is shown equal to VR; the QRH gives no separate V1. The C-212-400 and NC212i also offer the tactical take-off table.
+- **Approach and landing:** VREF (flaps LDG / 100 %), plus VAPP and VMAN for approach flap APP, 60 % and LDG: VAPP = VREF + ΔV flap + ADD and VMAN = VAPP + 10. ΔV flap is 0 kt above 70 %, 8 kt for 20–70 % and 16 kt at 20 % or less. ADD = ½ uniform wind + gust, maximum 10 kt.
+- **Rounding:** table values are rounded to the nearest knot, which matches the ground-school worked example (VREF 89 kt at 6850 kg). VMCA minimums are rounded up.
+- **Beyond the tables:** above the last weight column (C-212-300: 7.7 t take-off, 7.5 t landing) speeds are extrapolated and flagged.
+
+| Type | Source |
+|---|---|
+| C-212-300 | QRH C.L. C212DF-AA73-1 PD-2 Takeoff (flaps 25 %), PD-3 Descent and Landing |
+| C-212-400 / NC212i | QRH C-212-400M AB73-1 and QRH NC212i NTH1 PD-2 (normal and tactical T.O., flaps TO/APP), PD-22 |
